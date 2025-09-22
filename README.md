@@ -48,13 +48,13 @@ TermX comes with several built-in applications that work seamlessly with the vir
 
 To start using TermX, simply visit the live page. All the tools and applications are ready to use directly in your browser without any installation required.
 
-**🚀 Explore TermX Live: [https://davidhaba.github.io/TermX/](https://davidhaba.github.io/TermX/)**
+**🚀 Explore TermX Live: [TermX (MacOS)](https://davidhaba.github.io/TermX/)**
 
 ---
 
 ### Credits
 
-This project was developed by [Your Name] as a demonstration of front-end development skills, including:
+This project was developed by David as a demonstration of front-end development skills, including:
 
 * **JavaScript**: For all the logic, dynamic content, and virtual file system management.
 * **HTML & CSS**: For creating the user interface and styling the macOS-like environment.
