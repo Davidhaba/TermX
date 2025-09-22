@@ -1,0 +1,1620 @@
+<!DOCTYPE html>
+<html lang="uk">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TermX (MacOS)</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <div class="desktop" id="desktop"></div>
+  <script src="main.js"></script>
+  <script>
+    const ver = 'v2.8.6';
+    const icons = {
+      arrowUp: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M7 11.0001L12 6.00006L17 11.0001M12 18.0001V6.00006" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+      arrowDown: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M7 13L12 18L17 13M12 6L12 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+      arrowLeft: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M11.0001 7L6.00006 12L11.0001 17M18.0001 12L6.00006 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+      arrowRight: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 7L18 12L13 17M6 12H18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+      enter: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 12h-9m0 0l4 4m-4-4l4-4M19 18v3a1 1 0 01-1 1H6a1 1 0 01-1-1V3a1 1 0 011-1h12a1 1 0 011 1v3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+      open: '<svg viewBox="0 0 24 24"><path d="M19,19V5H5V19H19M19,3A2,2 0 0,1 21,5V19A2,2 0 0,1 19,21H5A2,2 0 0,1 3,19V5A2,2 0 0,1 5,3H19M11,8H13V11H16V13H13V16H11V13H8V11H11V8Z"/></svg>',
+      openAs: '<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M11.403 5H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-6.403a3.01 3.01 0 0 1-1.743-1.612l-3.025 3.025A3 3 0 1 1 9.99 9.768l3.025-3.025A3.01 3.01 0 0 1 11.403 5Z" clip-rule="evenodd"/><path fill-rule="evenodd" d="M13.232 4a1 1 0 0 1 1-1H20a1 1 0 0 1 1 1v5.768a1 1 0 1 1-2 0V6.414l-6.182 6.182a1 1 0 0 1-1.414-1.414L17.586 5h-3.354a1 1 0 0 1-1-1Z" clip-rule="evenodd"/></svg>',
+      rename: '<svg viewBox="0 0 24 24"><path d="M16.84,2.73C16.45,2.73 16.07,2.88 15.77,3.17L13.65,5.29L18.95,10.6L21.07,8.5C21.67,7.89 21.67,6.94 21.07,6.36L17.9,3.17C17.6,2.88 17.22,2.73 16.84,2.73M12.94,6L4.84,14.11L7.4,14.39L7.58,16.68L9.86,16.85L10.15,19.41L18.25,11.3M4.25,15.04L2.5,21.73L9.2,19.94L8.96,17.78L6.65,17.61L6.47,15.29"/></svg>',
+      delete: '<svg viewBox="0 0 24 24"><path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"/></svg>',
+      refresh: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20A8,8 0 0,0 19.73,14.65H17.65A6,6 0 0,1 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z"/></svg>',
+      newFolder: '<svg viewBox="0 0 24 24"><path d="M10,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V8C22,6.89 21.1,6 20,6H12L10,4Z"/></svg>',
+      newFile: '<svg viewBox="0 0 24 24"><path d="M13,9H18.5L13,3.5V9M6,2H14L20,8V20A2,2 0 0,1 18,22H6C4.89,22 4,21.1 4,20V4C4,2.89 4.89,2 6,2M15,18V16H6V18H15M18,14V12H6V14H18Z"/></svg>',
+      folder: '<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.5 8H4m0-2v13a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V9a1 1 0 0 0-1-1h-5.032a1 1 0 0 1-.768-.36l-1.9-2.28a1 1 0 0 0-.768-.36H5a1 1 0 0 0-1 1Z"/></svg>',
+      audio: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12,3C13.1,3 14,3.9 14,5V13.5C14,14.33 13.33,15 12.5,15H11V18H13V20H11V21H9V20H7V18H9V5A2,2 0 0,1 11,3H12M12,5H11V13H12V5Z" fill="currentColor"/></svg>',
+      image: '<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M13 10a1 1 0 0 1 1-1h.01a1 1 0 1 1 0 2H14a1 1 0 0 1-1-1Z" clip-rule="evenodd"/><path fill-rule="evenodd" d="M2 6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12c0 .556-.227 1.06-.593 1.422A.999.999 0 0 1 20.5 20H4a2.002 2.002 0 0 1-2-2V6Zm6.892 12 3.833-5.356-3.99-4.322a1 1 0 0 0-1.549.097L4 12.879V6h16v9.95l-3.257-3.619a1 1 0 0 0-1.557.088L11.2 18H8.892Z" clip-rule="evenodd"/></svg>',
+      video: '<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M19.003 3A2 2 0 0 1 21 5v2h-2V5.414L17.414 7h-2.828l2-2h-2.172l-2 2H9.586l2-2H9.414l-2 2H3V5a2 2 0 0 1 2-2h14.003ZM3 9v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9H3Zm2-2.414L6.586 5H5v1.586Zm4.553 4.52a1 1 0 0 1 1.047.094l4 3a1 1 0 0 1 0 1.6l-4 3A1 1 0 0 1 9 18v-6a1 1 0 0 1 .553-.894Z" clip-rule="evenodd"/></svg>',
+      camera: '<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M14 7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7Zm2 9.387 4.684 1.562A1 1 0 0 0 22 17V7a1 1 0 0 0-1.316-.949L16 7.613v8.774Z" clip-rule="evenodd"/></svg>',
+      text: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14,17H7V15H14M17,13H7V11H17M17,9H7V7H17M19,3H5C3.89,3 3,3.89 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5C21,3.89 20.1,3 19,3Z" fill="currentColor"/></svg>',
+      terminal: '<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M3 4a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1H3Zm4.293 5.707a1 1 0 0 1 1.414-1.414l3 3a1 1 0 0 1 0 1.414l-3 3a1 1 0 0 1-1.414-1.414L9.586 12 7.293 9.707ZM13 14a1 1 0 1 0 0 2h3a1 1 0 1 0 0-2h-3Z" clip-rule="evenodd"/></svg>',
+      explorer: '<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M5.024 3.783A1 1 0 0 1 6 3h12a1 1 0 0 1 .976.783L20.802 12h-4.244a1.99 1.99 0 0 0-1.824 1.205 2.978 2.978 0 0 1-5.468 0A1.991 1.991 0 0 0 7.442 12H3.198l1.826-8.217ZM3 14v5a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5h-4.43a4.978 4.978 0 0 1-9.14 0H3Z" clip-rule="evenodd"/></svg>',
+      fileUnvalid: '<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linejoin="round" stroke-width="2" d="M10 3v4a1 1 0 0 1-1 1H5m14-4v16a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7.914a1 1 0 0 1 .293-.707l3.914-3.914A1 1 0 0 1 9.914 3H18a1 1 0 0 1 1 1Z"/></svg>',
+      fileVideo: '<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linejoin="round" stroke-width="2" d="M10 3v4a1 1 0 0 1-1 1H5m14-4v16a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7.914a1 1 0 0 1 .293-.707l3.914-3.914A1 1 0 0 1 9.914 3H18a1 1 0 0 1 1 1ZM9 12h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1v-2a1 1 0 0 1 1-1Zm5.697 2.395v-.733l1.269-1.219v2.984l-1.268-1.032Z"/></svg>',
+      fileImage: '<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path fill="currentColor" d="M16 18H8l2.5-6 2 4 1.5-2 2 4Zm-1-8.5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0Z"/><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 3v4a1 1 0 0 1-1 1H5m14-4v16a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7.914a1 1 0 0 1 .293-.707l3.914-3.914A1 1 0 0 1 9.914 3H18a1 1 0 0 1 1 1ZM8 18h8l-2-4-1.5 2-2-4L8 18Zm7-8.5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0Z"/></svg>',
+      fileAudio: '<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 3v4a1 1 0 0 1-1 1H5m8 7.5V8s3 1 3 4m3-8v16a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7.914a1 1 0 0 1 .293-.707l3.914-3.914A1 1 0 0 1 9.914 3H18a1 1 0 0 1 1 1Zm-6 12c0 1.105-1.12 2-2.5 2S8 17.105 8 16s1.12-2 2.5-2 2.5.895 2.5 2Z"/></svg>',
+      fileArchive: '<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-width="2" d="M10 3v4a1 1 0 0 1-1 1H5m14-4v16a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7.914a1 1 0 0 1 .293-.707l3.914-3.914A1 1 0 0 1 9.914 3H18a1 1 0 0 1 1 1Zm-4 1h.01v.01H15V5Zm-2 2h.01v.01H13V7Zm2 2h.01v.01H15V9Zm-2 2h.01v.01H13V11Zm2 2h.01v.01H15V13Zm-2 2h.01v.01H13V15Zm2 2h.01v.01H15V17Zm-2 2h.01v.01H13V19Z"/></svg>',
+      fileText: '<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 3v4a1 1 0 0 1-1 1H5m4 8h6m-6-4h6m4-8v16a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7.914a1 1 0 0 1 .293-.707l3.914-3.914A1 1 0 0 1 9.914 3H18a1 1 0 0 1 1 1Z"/></svg>',
+      fileExecutable: '<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 3v4a1 1 0 0 1-1 1H5m5 4-2 2 2 2m4-4 2 2-2 2m5-12v16a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7.914a1 1 0 0 1 .293-.707l3.914-3.914A1 1 0 0 1 9.914 3H18a1 1 0 0 1 1 1Z"/></svg>',
+      settings: '<svg width="24" height="24" viewBox="0 0 24 24"><path fill="currentColor" d="M12,15.5A3.5,3.5 0 0,1 8.5,12A3.5,3.5 0 0,1 12,8.5A3.5,3.5 0 0,1 15.5,12A3.5,3.5 0 0,1 12,15.5M19.43,12.97C19.47,12.65 19.5,12.33 19.5,12C19.5,11.67 19.47,11.34 19.43,11L21.54,9.37C21.73,9.22 21.78,8.95 21.66,8.73L19.66,5.27C19.54,5.05 19.27,4.96 19.05,5.05L16.56,6.05C16.04,5.66 15.5,5.32 14.87,5.07L14.5,2.42C14.46,2.18 14.25,2 14,2H10C9.75,2 9.54,2.18 9.5,2.42L9.13,5.07C8.5,5.32 7.96,5.66 7.44,6.05L4.95,5.05C4.73,4.96 4.46,5.05 4.34,5.27L2.34,8.73C2.21,8.95 2.27,9.22 2.46,9.37L4.57,11C4.53,11.34 4.5,11.67 4.5,12C4.5,12.33 4.53,12.65 4.57,12.97L2.46,14.63C2.27,14.78 2.21,15.05 2.34,15.27L4.34,18.73C4.46,18.95 4.73,19.03 4.95,18.95L7.44,17.94C7.96,18.34 8.5,18.68 9.13,18.93L9.5,21.58C9.54,21.82 9.75,22 10,22H14C14.25,22 14.46,21.82 14.5,21.58L14.87,18.93C15.5,18.68 16.04,18.34 16.56,17.94L19.05,18.95C19.27,19.03 19.54,18.95 19.66,18.73L21.66,15.27C21.78,15.05 21.73,14.78 21.54,14.63L19.43,12.97Z"/></svg>',
+      fullscreen: '<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M8 4H4m0 0v4m0-4 5 5m7-5h4m0 0v4m0-4-5 5M8 20H4m0 0v-4m0 4 5-5m7 5h4m0 0v-4m0 4-5-5"/></svg>',
+      minFullscreen: '<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M4 8h4V4m12 4h-4V4M4 16h4v4m12-4h-4v4"/></svg>',
+      volumeMute: '<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M15.5 8.43A4.985 4.985 0 0 1 17 12c0 1.126-.5 2.5-1.5 3.5m2.864-9.864A8.972 8.972 0 0 1 21 12c0 2.023-.5 4.5-2.5 6M7.8 7.5l2.56-2.133a1 1 0 0 1 1.64.768V12m0 4.5v1.365a1 1 0 0 1-1.64.768L6 15H4a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1m1-4 14 14"/></svg>',
+      volumeDown: '<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M17.5 8.43A4.985 4.985 0 0 1 19 12a4.984 4.984 0 0 1-1.43 3.5M14 6.135v11.73a1 1 0 0 1-1.64.768L8 15H6a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1h2l4.36-3.633a1 1 0 0 1 1.64.768Z"/></svg>',
+      volumeUp: '<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M15.5 8.43A4.985 4.985 0 0 1 17 12a4.984 4.984 0 0 1-1.43 3.5m2.794 2.864A8.972 8.972 0 0 0 21 12a8.972 8.972 0 0 0-2.636-6.364M12 6.135v11.73a1 1 0 0 1-1.64.768L6 15H4a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1h2l4.36-3.633a1 1 0 0 1 1.64.768Z"/></svg>',
+      pause: '<svg style="transform: translateX(1px);" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M8.6 5.2A1 1 0 0 0 7 6v12a1 1 0 0 0 1.6.8l8-6a1 1 0 0 0 0-1.6l-8-6Z" clip-rule="evenodd"/></svg>',
+      play: '<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M8 5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H8Zm7 0a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1Z" clip-rule="evenodd"/></svg>',
+    };
+    let fileSystem;
+    let desktop;
+    window.onload = () => {
+      fileSystem = new FileSystem();
+      desktop = new Desktop();
+      new Terminal();
+      alert(
+        "!! Please read this !! \n\nHey! Hope you like what you'll see. Anyway, feel free to drop a comment with any suggestions—every idea is important to me! \n\nThanks for your time and support!"
+      );
+    }
+    class FileSystemClone {
+      constructor() {
+        this.root = fileSystem.globalRoot;
+        const homeDir = this.root.children.find(d => d.name === 'home' && d.type === 'directory');
+        if (homeDir) {
+          this.path = '/home';
+        } else {
+          this.path = '/';
+        }
+      }
+    }
+    class FileSystem {
+      constructor() {
+        this.globalRoot = this.createDirectory('root', { isSystem: true });
+        this.globalRoot.children.push(this.createDirectory('home'));
+        if (!this.exists(this.globalRoot.children, 'home')) {
+          throw new Error('Failed to initialize home directory');
+        }
+        const binDir = this.createDirectory('bin', { isSystem: true });
+        this.globalRoot.children.push(binDir);
+        binDir.children.push(...[
+          this.createFile('lion_photo.png',
+            'https://dl.dropbox.com/scl/fi/5mgu2ty49y9xhvvm10b7k/1757933368173.jpg?rlkey=pfj4dtp5dfqkcvud6cs57ertk&st=qq0koisz'),
+          this.createFile('lion_video.mp4', 'https://dl.dropbox.com/scl/fi/5r13hlefcadlrm7qu43na/lion.mp4?rlkey=2tuwue1qtf3xjoy8kwdf1qzwj'),
+          this.createFile('Kamin - ZetaMix (Sloved Reverb).mp3',
+            'https://dl.dropbox.com/scl/fi/a1rrytd8dggp07mug6kue/kamin.mp3?rlkey=b0bxdstk8eje3jj4z4uua54e5&st=gse4q6vp')
+        ]);
+      }
+      asyncReadFile(path) {
+        return new Promise((resolve, reject) => {
+          setTimeout(() => {
+            try {
+              const file = this._resolvePath(path);
+              if (!file || file.type !== 'file') {
+                throw new Error(`File not found: ${path}`);
+              }
+              if (file.parameters.encoding === 'binary') {
+                resolve(new Blob([file.content]));
+              } else {
+                resolve(file.content);
+              }
+            } catch (error) {
+              reject(error);
+            }
+          }, 0);
+        });
+      }
+      createDirectory(name, parameters = { isSystem: false }) {
+        if (!this._validateName(name)) {
+          throw new Error(`Invalid directory name: ${name}`);
+        }
+        return {
+          name,
+          type: 'directory',
+          children: [],
+          parameters
+        };
+      }
+      createFile(name, content = '', parameters = {}) {
+        if (!this._validateName(name)) {
+          throw new Error(`Invalid file name: ${name}`);
+        }
+        const finalParameters = { ...{ isBinary: false, isSystem: false, encoding: "UTF-8" }, ...parameters };
+        return {
+          name,
+          type: 'file',
+          content: finalParameters.isBinary ? new Uint8Array(content) : String(content),
+          parameters: finalParameters,
+        };
+      }
+      _validateName(name) {
+        name = name.trim();
+        if (name.includes('/') || name === '.' || name === '..') return false;
+        return true;
+      }
+      ls(path) {
+        return this._resolvePath(path).children;
+      }
+      mkdirp(path) {
+        const parts = path.split('/').filter(p => p);
+        let current = this.globalRoot;
+        for (const part of parts) {
+          let dir = current.children.find(d => d.name === part && d.type === 'directory');
+          if (!dir) {
+            dir = this.createDirectory(part);
+            current.children.push(dir);
+          }
+          current = dir;
+        }
+        return current;
+      }
+      mkdir(currentPath, name) {
+        const targetDir = this._resolvePath(currentPath);
+        if (!targetDir || targetDir.type !== 'directory') {
+          throw new Error('Invalid path to create directory');
+        }
+        if (!this.exists(targetDir.children, name)) {
+          const newDir = this.createDirectory(name);
+          return targetDir.children.push(newDir);
+        }
+        return false;
+      }
+      exists(children, name) {
+        return children.some(item => item.name === name);
+      }
+      findIndex(children, name) {
+        return children.findIndex(item => item.name === name);
+      }
+      cd(currentPath, newPath) {
+        if (typeof newPath !== 'string') {
+          throw new Error('Path must be a string');
+        }
+        if (newPath === '/') {
+          return '/';
+        }
+        let targetPath;
+        if (newPath.startsWith('/')) {
+          targetPath = newPath;
+        } else {
+          const parts = currentPath.split('/').filter(p => p);
+          const newPathParts = newPath.split('/');
+          for (const part of newPathParts) {
+            if (part === '..') {
+              if (parts.length > 0) {
+                parts.pop();
+              }
+            } else if (part !== '.' && part !== '') {
+              parts.push(part);
+            }
+          }
+          targetPath = '/' + parts.join('/');
+        }
+        const targetDir = this._resolvePath(targetPath);
+        if (targetDir && targetDir.type === 'directory') {
+          return targetPath;
+        }
+        throw new Error(`Directory not found: ${newPath}`);
+      }
+      _findParent(targetNode, startNode = this.globalRoot) {
+        if (startNode === targetNode) return null;
+        
+        const queue = [startNode];
+        while (queue.length > 0) {
+          const current = queue.shift();
+          for (const child of current.children) {
+            if (child === targetNode) {
+              return current;
+            }
+            if (child.type === 'directory') {
+              queue.push(child);
+            }
+          }
+        }
+        return null;
+      }
+      _resolvePath(path, startDir = this.globalRoot) {
+        if (!path || path === '/') {
+          return this.globalRoot;
+        }
+        const parts = path.split('/').filter(p => p !== '' && p !== '.');
+        let current = startDir;
+        for (const part of parts) {
+          if (part === '..') {
+            const parent = this._findParent(current);
+            if (parent) {
+              current = parent;
+            }
+          } else {
+            const found = current.children.find(item => item.name === part);
+            if (!found) return null;
+            current = found;
+          }
+        }
+        return current;
+      }
+      touch(currentPath, name) {
+        const targetDir = this._resolvePath(currentPath);
+        if (!targetDir || targetDir.type !== 'directory') {
+          throw new Error('Invalid path to create file');
+        }
+        if (!this.exists(targetDir.children, name)) {
+          const newFile = this.createFile(name);
+          targetDir.children.push(newFile);
+          return true;
+        }
+        return false;
+      }
+      rm(currentPath, name, recursive = false) {
+        const targetDir = this._resolvePath(currentPath);
+        if (!targetDir || targetDir.type !== 'directory') {
+          throw new Error('Invalid path');
+        }
+        const index = this.findIndex(targetDir.children, name);
+        if (index === -1) throw new Error("File or directory does not exist");
+        const item = targetDir.children[index];
+        if (item.type === 'directory') {
+          if (item.parameters.isSystem === true) throw new Error("Can't remove system directory");
+          if (item.children.length > 0 && !recursive) return false;
+        } else if (item.type === 'file' && item.parameters.isSystem === true) {
+          throw new Error("Can't remove system file");
+        }
+        targetDir.children.splice(index, 1);
+        return true;
+      }
+      writeFile(fullPath, content, isBinary = false) {
+        if (!fullPath) throw new Error('Full path is required to write a file.');
+        const pathParts = fullPath.split('/').filter(p => p);
+        if (pathParts.length === 0) throw new Error('Cannot write to root directory.');
+        const fileName = pathParts.pop();
+        const dirPath = '/' + pathParts.join('/');
+        const targetDir = this._resolvePath(dirPath);
+        if (!targetDir || targetDir.type !== 'directory') this.mkdirp(dirPath);
+        const currentDir = this._resolvePath(dirPath);
+        const existingFile = currentDir.children.find(f => f.name === fileName);
+        if (existingFile) {
+          existingFile.content = isBinary ? new Uint8Array(content) : String(content);
+        } else {
+          const newFile = this.createFile(fileName, content, { isBinary: isBinary });
+          currentDir.children.push(newFile);
+        }
+        return true;
+      }
+      
+      readFile(currentPath, name, options = {}) {
+        const targetDir = this._resolvePath(currentPath);
+        if (!targetDir || targetDir.type !== 'directory') {
+          throw new Error('Invalid path');
+        }
+        const file = targetDir.children.find(item => item.name === name);
+        if (!file || file.type !== 'file') return null;
+        if (typeof file.content === 'string' && file.content.startsWith('http')) {
+          return file.content;
+        }
+        if (options === 'base64' && file.parameters.encoding === 'binary') {
+          return btoa(String.fromCharCode(...file.content));
+        }
+        if (options.asText && file.parameters.encoding === 'binary') {
+          const decoder = new TextDecoder(options.encoding || 'UTF-8');
+          return decoder.decode(file.content);
+        }
+        return file.content;
+      }
+      mv(sourceFullPath, targetFullPath) {
+        const source = this._resolvePath(sourceFullPath);
+        if (!source) {
+          throw new Error(`Source path '${sourceFullPath}' not found`);
+        }
+        const targetParentPath = targetFullPath.split('/').slice(0, -1).join('/');
+        const targetParent = this._resolvePath(targetParentPath);
+        const targetName = targetFullPath.split('/').pop() || source.name;
+        if (source.parameters.isSystem === true) throw new Error("Can't move system file or directory");
+        if (!targetParent || targetParent.type !== 'directory') {
+          throw new Error(`Invalid target path '${targetFullPath}'`);
+        }
+        if (source === targetParent.children.find(item => item.name === targetName)) {
+          return true;
+        }
+        if (this.exists(targetParent.children, targetName)) {
+          throw new Error(`Target '${targetName}' already exists`);
+        }
+        const sourceParent = this._findParent(source);
+        if (!sourceParent) {
+          throw new Error("Cannot move root directory");
+        }
+        sourceParent.children = sourceParent.children.filter(item => item !== source);
+        source.name = targetName;
+        targetParent.children.push(source);
+        return true;
+      }
+      
+      cp(currentPath, sourcePath, targetPath) {
+        const source = this._resolvePath(sourcePath, this._resolvePath(currentPath));
+        if (!source) throw new Error(`Source path '${sourcePath}' not found`);
+        const targetParent = this._resolvePath(targetPath.split('/').slice(0, -1).join('/'), this._resolvePath(currentPath));
+        const targetName = targetPath.split('/').pop() || source.name;
+        if (!targetParent || targetParent.type !== 'directory') {
+          throw new Error(`Invalid target path '${targetPath}'`);
+        }
+        if (this.exists(targetParent.children, targetName)) {
+          throw new Error(`Target '${targetName}' already exists`);
+        }
+        const copy = this._deepCopy(source);
+        copy.name = targetName;
+        targetParent.children.push(copy);
+        return true;
+      }
+      getItemSize(item) {
+        if (item.type === "directory") return item.children ? item.children.length : 0;
+        if (item.content instanceof Uint8Array) return item.content.length;
+        if (typeof item.content === "string") return new TextEncoder().encode(item.content).length;
+        return 0;
+      }
+      formatSize(bytes, type = null) {
+        const units = {
+          'B': 1,
+          'KB': 1024,
+          'MB': 1024 * 1024,
+          'GB': 1024 * 1024 * 1024
+        };
+        if (type === "directory") return `${bytes} item${bytes !== 1 ? 's' : ''}`;
+        if (bytes >= units['GB']) return `${(bytes / units['GB']).toFixed(2)} GB`;
+        if (bytes >= units['MB']) return `${(bytes / units['MB']).toFixed(2)} MB`;
+        if (bytes >= units['KB']) return `${(bytes / units['KB']).toFixed(2)} KB`;
+        return `${bytes} B`;
+      }
+      async decodeContent(content, outputFormat) {
+        if (!content) return null;
+        if (content instanceof Uint8Array) {
+          content = new Blob([content]);
+        }
+        switch (outputFormat) {
+          case 'url':
+            if (typeof content === 'string' && content.startsWith('http')) {
+              return content;
+            }
+            if (content instanceof Blob) {
+              return URL.createObjectURL(content);
+            }
+            throw new Error('Cannot convert this file content to a URL.');
+          case 'text':
+            if (typeof content === 'string') {
+              return content;
+            }
+            if (content instanceof Blob) {
+              return await content.text();
+            }
+            throw new Error('Cannot convert this file content to text.');
+          case 'blob':
+            if (content instanceof Blob) {
+              return content;
+            }
+            if (typeof content === 'string') {
+              return new Blob([content], {
+                type: 'text/plain'
+              });
+            }
+            throw new Error('Cannot convert this file content to a Blob.');
+          default:
+            return content;
+        }
+      }
+      getFileType(fileName) {
+        const extension = fileName.split('.').pop().toLowerCase();
+        const typeMap = {
+          'unvalid': {
+            type: 'unvalid',
+            display: 'File'
+          },
+          'mp4': {
+            type: 'video',
+            display: 'MP4 Video'
+          },
+          'mov': {
+            type: 'video',
+            display: 'MOV Video'
+          },
+          'avi': {
+            type: 'video',
+            display: 'AVI Video'
+          },
+          'webm': {
+            type: 'video',
+            display: 'WebM Video'
+          },
+          'mp3': {
+            type: 'audio',
+            display: 'MP3 Audio'
+          },
+          'wav': {
+            type: 'audio',
+            display: 'WAV Audio'
+          },
+          'flac': {
+            type: 'audio',
+            display: 'FLAC Audio'
+          },
+          'm4a': {
+            type: 'audio',
+            display: 'M4A Audio'
+          },
+          'png': {
+            type: 'image',
+            display: 'PNG Image'
+          },
+          'jpg': {
+            type: 'image',
+            display: 'JPG Image'
+          },
+          'jpeg': {
+            type: 'image',
+            display: 'JPEG Image'
+          },
+          'gif': {
+            type: 'image',
+            display: 'GIF Image'
+          },
+          'txt': {
+            type: 'text',
+            display: 'Text File'
+          },
+          'log': {
+            type: 'text',
+            display: 'Log File'
+          },
+          'md': {
+            type: 'text',
+            display: 'Markdown'
+          },
+          'html': {
+            type: 'text',
+            display: 'HTML Document'
+          },
+          'css': {
+            type: 'text',
+            display: 'CSS Stylesheet'
+          },
+          'json': {
+            type: 'text',
+            display: 'JSON File'
+          },
+          'js': {
+            type: 'executable',
+            display: 'JavaScript'
+          },
+          'app': {
+            type: 'executable',
+            display: 'Application'
+          }
+        };
+        return typeMap[extension] || typeMap['unvalid'];
+      }
+      openFile(path, fileType = 'auto') {
+        if (!path) {
+          throw new Error('Please specify a file path');
+        }
+        const file = this._resolvePath(path);
+        if (!file || file.type !== 'file') {
+          throw new Error(`File not found: ${path}`);
+        }
+        if (fileType === 'auto') {
+          fileType = this.getFileType(file.name).type;
+        }
+        switch (fileType) {
+          case 'video':
+            new VideoPlayer(path);
+            break;
+          case 'audio':
+            new AudioPlayer(path);
+            break;
+          case 'text':
+            new TextEditor(path);
+            break;
+          case 'image':
+            new ImageViewer(path);
+            break;
+          case 'executable':
+            const confirmationMessage = `
+ 🚨 WARNING! 🚨
+
+You are about to execute JavaScript code from a file.
+This is an extremely risky action if you do not trust the file's source 100%.
+
+Malicious code can:
+  - Steal your data (cookies, passwords, personal information).
+  - Perform actions on your behalf on this site.
+  - Damage the functionality of the page.
+
+Proceed with execution only if you are ABSOLUTELY sure this file is safe?`;
+            if (window.confirm(confirmationMessage)) {
+              console.log("User confirmed execution. Running script...");
+              try {
+                (async function() {
+                  fileSystem.asyncReadFile(path).then((content) => { return fileSystem.decodeContent(content, 'text'); }).then((content) => {
+                    const app = new Function(content)();
+                    if (app && typeof app.execute === 'function') {
+                      app.execute();
+                    }
+                  })
+                })();
+              } catch (e) {
+                throw new Error(`Execution error: ${e.message}`);
+              }
+            };
+            break;
+          default:
+            this.showAppPicker(path);
+        }
+      }
+      showAppPicker(path) {
+        const dialog = document.createElement('div');
+        dialog.className = 'app-picker-dialog';
+        const trimName = (name, maxLength = 20) => {
+          if (!name) return '';
+          const lastDotIndex = name.lastIndexOf('.');
+          if (lastDotIndex <= 0) {
+            if (name.length > maxLength) {
+              return name.substring(0, maxLength) + '...';
+            }
+            return name;
+          }
+          const fileNameWithoutExtension = name.substring(0, lastDotIndex);
+          const fileExtension = name.substring(lastDotIndex + 1);
+          if (fileNameWithoutExtension.length > maxLength) {
+            return fileNameWithoutExtension.substring(0, maxLength) + '...' + fileExtension;
+          }
+          return name;
+        };
+        dialog.innerHTML = `
+  <div class="app-picker-content">
+    <h3>Select application for '${trimName(path.split('/').pop())}':</h3>
+    <div class="app-list">
+      <button class="app-option" data-type="text">Text Editor</button>
+      <button class="app-option" data-type="image">Image Viewer</button>
+      <button class="app-option" data-type="video">Video Player</button>
+      <button class="app-option" data-type="audio">Audio Player</button>
+      <button class="app-option" data-type="executable">Execute</button>
+    </div>
+    <button class="cancel-btn">Cancel</button>
+  </div>`;
+        dialog.querySelectorAll('.app-option').forEach(btn => {
+          btn.addEventListener('click', () => {
+            dialog.remove();
+            this.openFile(path, btn.dataset.type);
+          });
+        });
+        dialog.querySelector('.cancel-btn').addEventListener('click', () => dialog.remove());
+        dialog.addEventListener('click', (e) => {
+          if (e.target === dialog) dialog.remove();
+        });
+        document.body.appendChild(dialog);
+      }
+      getResolvedPath(fullPath, path) {
+        if (!path || path === '/' || path.startsWith('/')) {
+          return path;
+        }
+        const parts = fullPath.split('/').filter(p => p);
+        const pathParts = path.split('/');
+        for (const part of pathParts) {
+          if (part === '..') {
+            if (parts.length > 0) {
+              parts.pop();
+            }
+          } else if (part !== '.' && part !== '') {
+            parts.push(part);
+          }
+        }
+        return '/' + parts.join('/');
+      }
+      _deepCopy(node) {
+        const copy = {
+          name: node.name,
+          type: node.type,
+          content: node.content
+        };
+        if (node.type === 'directory') {
+          copy.children = node.children.map(child => this._deepCopy(child));
+        }
+        return copy;
+      }
+    }
+    class Terminal {
+      constructor() {
+        this.appName = 'TermX';
+        this.terminalApp = new Modal(this.appName);
+        this.terminalWindow = this.terminalApp.appMain;
+        this.terminalWindow.classList.add("padd");
+        this.terminalMain = this.terminalApp.modWindow;
+        this.updateTitle = this.terminalApp.updateTitle;
+        this.history = [];
+        this.historyIndex = -1;
+        this.isDownloadedSpec = false;
+        this.currentHint = null;
+        this.init();
+        this.commands = {
+          help: {
+            execute: this.help.bind(this),
+            help: {
+              description: "Show help information",
+              usage: "help [command]",
+              example: "help\nhelp cd"
+            }
+          },
+          about: {
+            execute: this.about.bind(this),
+            help: {
+              description: "Show information about the terminal",
+              usage: "about"
+            }
+          },
+          special: {
+            execute: async () => {
+              if (!this.isDownloadedSpec) {
+                await this.simulateDownload(['3000', '10MB', 'Downloading...']);
+                this.isDownloadedSpec = true;
+              }
+              this.isSpecialMode = true;
+              this.addOutputLine('Entered special mode. Type "exit" to return.', 'info');
+            },
+            help: {
+              description: "Enter special command mode",
+              usage: "special",
+            }
+          },
+          exit: {
+            execute: this.exit.bind(this),
+            help: {
+              description: "Exit the terminal",
+              usage: "exit",
+            }
+          },
+          clear: {
+            execute: this.clear.bind(this),
+            help: {
+              description: "Clear terminal screen",
+              usage: "clear",
+            }
+          },
+          ls: {
+            execute: this.ls.bind(this),
+            help: {
+              description: "List directory contents",
+              usage: "ls",
+              example: "ls"
+            }
+          },
+          mkdir: {
+            execute: this.mkdir.bind(this),
+            help: {
+              description: "Create new directory",
+              usage: "mkdir <directory_name>",
+              example: "mkdir new_folder"
+            }
+          },
+          cd: {
+            execute: this.cd.bind(this),
+            help: {
+              description: "Change current directory",
+              usage: "cd <path>",
+              example: "cd folder\ncd .."
+            }
+          },
+          touch: {
+            execute: this.touch.bind(this),
+            help: {
+              description: "Create new empty file",
+              usage: "touch <file_name>",
+              example: "touch file.txt"
+            }
+          },
+          rm: {
+            execute: this.rm.bind(this),
+            help: {
+              description: "Remove file or directory",
+              usage: "rm [-r] <path>",
+              example: "rm old_file\nrm -r old_folder"
+            }
+          },
+          echo: {
+            execute: this.echo.bind(this),
+            help: {
+              description: "Display message or write text to file",
+              usage: "echo [text] > [filename]",
+              example: 'echo Hello World\necho Hello World > file.txt'
+            }
+          },
+          cat: {
+            execute: this.cat.bind(this),
+            help: {
+              description: "Show file contents",
+              usage: "cat <file_name>",
+              example: "cat file.txt"
+            }
+          },
+          pwd: {
+            execute: this.pwd.bind(this),
+            help: {
+              description: "Print current working directory",
+              usage: "pwd",
+            }
+          },
+          mv: {
+            execute: this.mv.bind(this),
+            help: {
+              description: "Move or rename files and directories",
+              usage: "mv <source> <target>",
+              example: "mv old.txt new.txt\nmv file.txt dir/"
+            }
+          },
+          cp: {
+            execute: this.cp.bind(this),
+            help: {
+              description: "Copy files and directories",
+              usage: "cp <source> <target>",
+              example: "cp file.txt backup/\ncp -r dir/ backup/"
+            }
+          },
+          progress: {
+            execute: async (args) => {
+              try {
+                await this.simulateDownload(args);
+              } catch (error) {
+                this.addOutputLine(error.message, 'error');
+              }
+            },
+            help: {
+              description: "Simulate file download with progress bar",
+              usage: "progress [duration] [size] [label]",
+              example: "progress 5000 20MB Downloading..."
+            }
+          },
+          notepad: {
+            execute: (args) => {
+              const path = fileSystem.getResolvedPath(this.context.path, args[0]);
+              try {
+                if (path) {
+                  new TextEditor(path);
+                } else {
+                  new TextEditor();
+                }
+              } catch (error) {
+                this.addOutputLine(error.message, 'error');
+              }
+            },
+            help: {
+              description: "Open file in text editor",
+              usage: "notepad [file_path]",
+              example: "notepad\nnotepad ../folder/file.txt"
+            }
+          },
+          run: {
+            execute: (args) => fileSystem.openFile(fileSystem.getResolvedPath(this.context.path, args[0]), 'executable'),
+            help: {
+              description: "Execute application",
+              usage: "run <file_path>",
+              example: "run app.js"
+            }
+          },
+          open: {
+            execute: (args) => fileSystem.openFile(fileSystem.getResolvedPath(this.context.path, args[0]), args[1]),
+            help: {
+              description: "Open any file (auto-detect type)",
+              usage: "open <file_path> [file_type](audio, video, image, text or executable)",
+              example: "open document.txt\nopen folder/file text"
+            }
+          },
+          download: {
+            execute: this.download.bind(this),
+            help: {
+              description: "Download file from URL",
+              usage: "download <url> [filename]",
+              example: "download https://example.com/file.txt\n" +
+                "download https://example.com/image.png myimage.png"
+            }
+          },
+        };
+        this.isSpecialMode = false;
+        this.specialCommands = {
+          exit: {
+            execute: () => {
+              this.isSpecialMode = false;
+              this.addOutputLine('Exited special mode', 'info');
+            },
+            help: {
+              description: "Exit special mode",
+              usage: "exit",
+            }
+          },
+          help: {
+            execute: this.help.bind(this),
+            help: {
+              description: "Show help information",
+              usage: "help [command]",
+              example: "help\nhelp exit"
+            }
+          },
+          calc: {
+            execute: (args) => {
+              try {
+                const [mathExpression, result] = this.safeEval(args.join(' '));
+                this.addOutputLine(`${mathExpression} = ${result}`);
+              } catch (error) {
+                this.addOutputLine(error.message, 'error');
+              }
+            },
+            help: {
+              description: "Calculate math expression",
+              usage: "calc <expression>",
+              example: "1+1\ncalc 2*(3+4)"
+            }
+          }
+        };
+      }
+      init() {
+        this.terminalApp.setupExitBtn();
+        this.terminalApp.setApp();
+        this.terminalApp.setupInfoBtn('TermX',
+          'TermX is a powerful command-line interface for interacting with the system. It supports a variety of commands for file and directory management (ls, cd, mkdir, rm, mv, cp), text manipulation (echo, cat, edit), and other utilities (help, about, clear). You can use it to perform complex operations, manage files, and even download content from the internet. Use the "help" command to see all available commands and their usage.'
+        );
+        this.context = new FileSystemClone();
+        this.about();
+        this.addOutputLine("Type 'help' for help");
+        this.createInputLine();
+        this.placeCaretAtEnd(this.input);
+        this.terminalMain.addEventListener('keyup', () => this.placeCaretAtEnd(this.input));
+        this.terminalWindow.addEventListener('click', () => this.input.focus());
+        
+        const keyboardControls = document.createElement('div');
+        keyboardControls.classList.add("keyboard-controls");
+        keyboardControls.innerHTML = `
+            <button data-key="ArrowUp">${icons.arrowUp}</button>
+            <button data-key="ArrowDown">${icons.arrowDown}</button>
+            <button data-key="ArrowLeft">${icons.arrowLeft}</button>
+            <button data-key="ArrowRight">${icons.arrowRight}</button>
+            <button data-key="Tab">Tab</button>
+            <button data-key="Enter" style="padding: 5px 15px;">${icons.enter}</button>
+        `;
+        this.terminalMain.appendChild(keyboardControls);
+        let lastWinHeight = window.innerHeight;
+        window.addEventListener('resize', () => {
+          const currentHeight = window.innerHeight;
+          if (currentHeight < lastWinHeight) {
+            keyboardControls.classList.add('visible');
+          } else {
+            keyboardControls.classList.remove('visible');
+          }
+          lastWinHeight = currentHeight;
+        });
+        keyboardControls.addEventListener('touchstart', (e) => {
+          if (e.target.tagName === 'BUTTON') e.target.classList.add("active");
+        });
+        keyboardControls.addEventListener('touchend', (e) => {
+          const button = e.target.tagName === 'BUTTON' ? e.target : e.target.closest('button');
+          if (button) {
+            button.classList.remove("active");
+            e.preventDefault();
+            const key = e.target.dataset.key;
+            if (!this.input) return;
+            if (key === 'ArrowLeft') {
+              const start = this.input.selectionStart;
+              this.input.selectionEnd = start > 0 ? start - 1 : 0;
+            } else if (key === 'ArrowRight') {
+              const end = this.input.selectionEnd;
+              const textLength = this.input.textContent.length;
+              this.input.selectionStart = end < textLength ? end + 1 : textLength;
+            } else {
+              this.input.dispatchEvent(new KeyboardEvent('keydown', {
+                key: key,
+                bubbles: true,
+                cancelable: true
+              }));
+            }
+          }
+        });
+      }
+      exit() {
+        this.addOutputLine('Closing terminal...', 'info');
+        this.terminalApp.handleClose();
+      }
+      placeCaretAtEnd(input) {
+        if (input) {
+          input.focus();
+          if (typeof window.getSelection != "undefined" && typeof document.createRange != "undefined") {
+            let range = document.createRange();
+            range.selectNodeContents(input);
+            range.collapse(false);
+            let sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+          }
+        }
+      }
+      createInputLine() {
+        this.terminalApp.updateTitle(this.appName);
+        const line = document.createElement('div');
+        line.className = 'i-line';
+        
+        this.prompt = document.createElement('span');
+        this.prompt.className = 'prompt';
+        this.updatePrompt();
+        
+        this.input = document.createElement('span');
+        this.input.className = 'stdin';
+        this.input.contentEditable = true;
+        this.input.setAttribute('autocorrect', 'off');
+        this.input.setAttribute('autocapitalize', 'off');
+        this.input.setAttribute('spellcheck', 'false');
+        this.input.setAttribute('autocomplete', 'off');
+        this.input.setAttribute('enterkeyhint', 'done');
+        this.input.spellcheck = false;
+        this.input.autocapitalize = 'none';
+        this.input.autocorrect = 'off';
+        
+        line.appendChild(this.prompt);
+        line.appendChild(this.input);
+        this.terminalWindow.appendChild(line);
+        
+        this.input.addEventListener('input', () => this.updateHint());
+        this.input.addEventListener('keydown', this.handleInput.bind(this));
+        this.input.addEventListener('mouseup', () => this.placeCaretAtEnd(this.input));
+      }
+      
+      updatePrompt() {
+        if (!this.isSpecialMode) this.prompt.textContent = `${this.appName}@Sololearn:${this.context.path}$`;
+        else this.prompt.textContent = ">>>";
+      }
+      handleInput(e) {
+        this.updatePrompt();
+        switch (e.key) {
+          case 'Enter':
+            e.preventDefault();
+            this.executeCommand(this.input.textContent.trim());
+            if (this.currentHint) {
+              this.currentHint.remove();
+              this.currentHint = null;
+              this.updateHint();
+            }
+            break;
+          case 'ArrowUp':
+            e.preventDefault();
+            this.navigateHistory(-1);
+            break;
+          case 'ArrowDown':
+            e.preventDefault();
+            this.navigateHistory(1);
+            break;
+          case 'ArrowLeft':
+            e.preventDefault();
+            break;
+          case 'ArrowRight':
+            e.preventDefault();
+            this.handleTab();
+            break;
+          case 'Tab':
+            e.preventDefault();
+            this.handleTab();
+            break;
+        }
+      }
+      addOutputLine(text, type = 'normal') {
+        const line = document.createElement('div');
+        line.className = 'o-line';
+        if (type === 'success') {
+          line.innerHTML = `<span class="badge success">✓</span>${text}`;
+        } else if (type === 'error') {
+          line.innerHTML = `<span class="badge error">!</span>${text}`;
+        } else if (type === 'info') {
+          line.innerHTML = `<span class="badge info">i</span>${text}`;
+        } else {
+          line.textContent = text;
+        }
+        this.terminalWindow.appendChild(line);
+      }
+      createNewInputLine() {
+        this.input.contentEditable = false;
+        this.createInputLine();
+        this.placeCaretAtEnd(this.input);
+      }
+      scrollToBottom() {
+        this.terminalWindow.scrollTop = this.terminalWindow.scrollHeight;
+      }
+      navigateHistory(direction) {
+        this.historyIndex = Math.max(0,
+          Math.min(this.history.length, this.historyIndex + direction));
+        if (this.historyIndex >= 0 && this.historyIndex !== this.history.length) {
+          const history = this.history[this.historyIndex];
+          if (history) this.input.textContent = history;
+        } else {
+          this.input.textContent = '';
+        }
+        this.placeCaretAtEnd(this.input);
+      }
+      
+      parseFullArguments(commandStr) {
+        const parts = [];
+        let inQuotes = false;
+        let currentPart = '';
+        for (let i = 0; i < commandStr.length; i++) {
+          const char = commandStr[i];
+          if (char === '"' || char === "'") {
+            inQuotes = !inQuotes;
+            if (inQuotes === false) {
+              if (currentPart.length > 0) {
+                parts.push(currentPart);
+                currentPart = '';
+              }
+            }
+          } else if (char === ' ' && !inQuotes) {
+            if (currentPart.length > 0) {
+              parts.push(currentPart);
+            }
+            currentPart = '';
+          } else {
+            currentPart += char;
+          }
+        }
+        if (currentPart.length > 0) {
+          parts.push(currentPart);
+        }
+        return parts;
+      }
+      
+      async executeCommand(fullCommand) {
+        this.scrollToBottom();
+        this.input.contentEditable = false;
+        if (this.history[this.history.length - 1] !== fullCommand) {
+          this.history.push(fullCommand);
+        }
+        this.historyIndex = this.history.length;
+        const commandChain = fullCommand.split('&&').map(cmd => cmd.trim()).filter(cmd => cmd);
+        for (const commandStr of commandChain) {
+          const fullArgs = this.parseFullArguments(commandStr);
+          const command = fullArgs[0];
+          const args = fullArgs.slice(1);
+          try {
+            this.terminalApp.updateTitle(command + ' - ' + this.appName);
+            if (this.isSpecialMode) {
+              if (!this.specialCommands[command]) {
+                const [mathExpression, result] = this.safeEval(fullCommand);
+                this.addOutputLine(`${mathExpression} = ${result}`);
+                this.scrollToBottom();
+              } else {
+                await this.specialCommands[command].execute(args);
+              }
+            } else {
+              if (this.commands[command]) {
+                await this.commands[command].execute(args);
+              } else {
+                this.addOutputLine(`'${command.length > 15 ? command.substring(0, 15) + '...' : command}' is not recognized as a command`, 'error');
+              }
+            }
+          } catch (error) {
+            this.addOutputLine(error.message, 'error');
+            break;
+          }
+        }
+        this.createNewInputLine();
+        this.scrollToBottom();
+      }
+      safeEval(expression) {
+        const mathExpression = expression.replace(/[^0-9+\-*/%e^().\s]/g, '');
+        if (mathExpression.trim() === '') {
+          throw new Error("No valid mathematical expression to evaluate.");
+        }
+        try {
+          const result = new Function(`"use strict"; return (${mathExpression})`)();
+          return [mathExpression, result];
+        } catch (error) {
+          throw new Error(`Evaluation error: ${error.message}`);
+        }
+      }
+      help(args) {
+        let cmdSet = this.isSpecialMode ? this.specialCommands : this.commands;
+        if (args.length === 0) {
+          this.addOutputLine('Available commands:', 'info');
+          this.addOutputLine('\n' + 'Command'.padEnd(11) + 'Description');
+          Object.entries(cmdSet).forEach(([cmd, data]) => {
+            this.addOutputLine(`${cmd?.padEnd(10)} - ${data?.help?.description ?? '...'}`);
+          });
+          this.addOutputLine('\nUse "help <command>" for details');
+        } else {
+          const command = args[0];
+          if (cmdSet[command]) {
+            const info = cmdSet[command].help;
+            const des = info?.description;
+            const us = info?.usage;
+            const ex = info?.example?.replace(/\n/g, '\n  ');
+            this.addOutputLine("Help for: " + command, 'info');
+            if (des) this.addOutputLine("Description: " + des);
+            if (us) this.addOutputLine(`Usage:      ${us}`);
+            if (ex) this.addOutputLine(`Examples:\n  ${ex}`);
+          } else {
+            this.addOutputLine(`Command '${command}' not found`, 'error');
+          }
+        }
+      }
+      clear() {
+        this.terminalWindow.innerHTML = '';
+        this.addOutputLine('Terminal cleared', 'info');
+      }
+      about() {
+        this.addOutputLine(`TermX ${ver} (by David)`, 'info');
+      }
+      formatItemInfo(item) {
+        return fileSystem.formatSize(fileSystem.getItemSize(item), item.type);
+      }
+      ls() {
+        const files = fileSystem.ls(this.context.path);
+        const currentDir = fileSystem._resolvePath(this.context.path);
+        let parentDir;
+        if (this.context.path !== '/') {
+          parentDir = fileSystem._resolvePath(fileSystem._findParent(this.context.path));
+        }
+        if (!parentDir && (!files.length || files.length === 0)) {
+          this.addOutputLine("Directory is empty.");
+          return;
+        }
+        if (currentDir)
+          this.addOutputLine('.'.padEnd(10) + ` [Current Directory] [${this.formatItemInfo(currentDir)}]`);
+        if (parentDir)
+          this.addOutputLine('..'.padEnd(10) + ` [Parent Directory] [${this.formatItemInfo(parentDir)}]`);
+        files.forEach(file => {
+          this.addOutputLine(file.name.padEnd(10) + ` [${file.type}] [${this.formatItemInfo(file)}]`);
+        });
+      }
+      mkdir(args) {
+        if (args.length === 0) {
+          this.addOutputLine('Please specify directory name', 'error');
+          return;
+        }
+        const success = fileSystem.mkdir(this.context.path, args[0]);
+        if (success) {
+          this.addOutputLine(`Directory '${args[0]}' created`);
+        } else {
+          this.addOutputLine(`Directory '${args[0]}' already exists`, 'error');
+        }
+      }
+      cd(args) {
+        if (args.length === 0) {
+          this.addOutputLine('Please specify path', 'error');
+          return;
+        }
+        const newPath = fileSystem.cd(this.context.path, args[0]);
+        if (!newPath) {
+          this.addOutputLine(`Invalid path: ${args[0]}`, 'error');
+        }
+        this.context.path = newPath;
+      }
+      touch(args) {
+        if (args.length === 0) {
+          throw new Error('Please specify filename');
+        }
+        const success = fileSystem.touch(this.context.path, args[0]);
+        if (success) {
+          this.addOutputLine(`File '${args[0]}' created`);
+        } else {
+          this.addOutputLine(`File '${args[0]}' already exists`, 'error');
+        }
+      }
+      rm(args) {
+        if (args.length === 0) {
+          throw new Error('Please specify path');
+        }
+        let recursive = false;
+        let success;
+        const targetIndex = args.findIndex(arg => arg !== '-r');
+        if (targetIndex !== 0) {
+          recursive = true;
+          args = args.slice(targetIndex);
+        }
+        try {
+          success = fileSystem.rm(this.context.path, args[0], recursive);
+        } catch (e) {
+          throw new Error(e);
+        }
+        if (!success) {
+          const errorMsg = recursive ?
+            "Can't remove directory" :
+            "Directory not empty, use -r for recursive removal";
+          throw new Error(errorMsg);
+        }
+        this.addOutputLine(`'${args[0]}' removed`);
+      }
+      echo(args) {
+        const input = args.join(' ');
+        if (!input.includes('>')) {
+          this.addOutputLine(input);
+          return;
+        }
+        const parts = input.split(' > ').map(p => p.trim());
+        if (parts.length !== 2 || parts[0] === '' || parts[1] === '') {
+          throw new Error('Invalid syntax. Use: echo [text] > [filename]');
+        }
+        const [text, filePath] = parts;
+        const fullPath = fileSystem.getResolvedPath(this.context.path, filePath);
+        const target = fileSystem._resolvePath(fullPath);
+        const success = fileSystem.writeFile(fullPath, text);
+        if (!success) throw new Error(`Failed to write to file '${fullPath}'`);
+        this.addOutputLine(`Content written to '${fullPath}'`);
+      }
+      async cat(args) {
+        if (args.length === 0) {
+          throw new Error('Please specify filename');
+        }
+        const content = await fileSystem.decodeContent(fileSystem.readFile(this.context.path, args[0], { asText: true }), 'text');
+        if (content === null) {
+          throw new Error(`File '${args[0]}' not found`);
+        }
+        this.addOutputLine(content);
+      }
+      pwd() {
+        this.addOutputLine('Current directory: ' + this.context.path);
+      }
+      createProgressBar(label) {
+        const progressBar = document.createElement('div');
+        progressBar.className = 'progress-bar';
+        progressBar.innerHTML = `
+            <div class="progress-column">
+                <div class="progress-label">${label}</div>
+                <div class="progress-container">
+                  <div class="progress-track">
+                      <div class="progress-fill"></div>
+                  </div>
+                  <div class="progress-details">
+                      <span class="progress-percent">0%</span>
+                      <span class="progress-size">0/0</span>
+                  </div>
+                </div>
+            </div>
+        `;
+        this.terminalWindow.appendChild(progressBar);
+        return progressBar;
+      }
+      updateProgressBar(progressBar, percent, loaded, total, label) {
+        const percentElement = progressBar.querySelector('.progress-percent');
+        const sizeElement = progressBar.querySelector('.progress-size');
+        const fillElement = progressBar.querySelector('.progress-fill');
+        const formattedPercent = Math.floor(percent);
+        const formattedLoaded = fileSystem.formatSize(loaded);
+        const formattedTotal = total > 0 ? fileSystem.formatSize(total) : '??';
+        fillElement.style.width = `${percent}%`;
+        percentElement.textContent = `${formattedPercent}%`;
+        sizeElement.textContent = `${formattedLoaded}/${formattedTotal}`;
+        this.terminalApp.updateTitle(`${label} ${formattedPercent}% - ` + this.appName);
+      }
+      async simulateDownload(args) {
+        try {
+          const duration = args[0] ? parseInt(args[0]) : 5000;
+          const size = this.parseSize(args[1] || '5MB');
+          const label = args.slice(2).join(' ') || "Simulation download";
+          const progressBar = this.createProgressBar(label);
+          let loaded = 0;
+          const startTime = Date.now();
+          const updateInterval = 100;
+          const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+          while (true) {
+            const elapsed = Date.now() - startTime;
+            const percent = Math.min(100, (elapsed / duration) * 100);
+            loaded = Math.min(size, (size * percent) / 100);
+            this.updateProgressBar(progressBar, percent, loaded, size, label);
+            if (percent >= 100) break;
+            await delay(updateInterval);
+          }
+          this.addOutputLine("Download complete!", 'success');
+        } catch (error) {
+          this.addOutputLine(`Simulation error: ${error.message}`, 'error');
+        }
+      }
+      parseSize(sizeStr) {
+        const units = {
+          'B': 1,
+          'KB': 1024,
+          'MB': 1024 * 1024,
+          'GB': 1024 * 1024 * 1024
+        };
+        const match = sizeStr.match(/^(\d+)([KMGT]?B)$/i);
+        if (!match) throw new Error('Invalid size format');
+        const value = parseInt(match[1]);
+        const unit = match[2].toUpperCase();
+        if (!units[unit]) throw new Error('Unknown unit');
+        return value * units[unit];
+      }
+      updateHint() {
+        try {
+          if (this.currentHint) {
+            this.currentHint.remove();
+            this.currentHint = null;
+          }
+          const text = this.input.textContent;
+          const hints = this.getHints(text);
+          if (!hints || !hints.length || hints[0] === '') return;
+          this.currentHint = document.createElement('span');
+          this.currentHint.className = 'stdin-hint';
+          this.currentHint.textContent = hints[0];
+          this.input.parentNode.appendChild(this.currentHint);
+        } catch (error) {
+          if (this.currentHint) {
+            this.currentHint.remove();
+            this.currentHint = null;
+          }
+        }
+      }
+      getHints(text) {
+        if (!text) return null;
+        const parts = text.split(' ');
+        const currentWord = parts[parts.length - 1];
+        const commands = this.isSpecialMode ? this.specialCommands : this.commands;
+        if (parts.length === 1) {
+          return Object.keys(commands)
+            .filter(cmd => cmd.startsWith(currentWord))
+            .map(cmd => cmd.slice(currentWord.length));
+        }
+        const command = parts[0];
+        if (commands[command]) {
+          return this.getCommandHints(command, parts.slice(1), currentWord);
+        }
+        return [''];
+      }
+      getCommandHints(command, args, currentWord) {
+        switch (command) {
+          case 'help':
+            return Object.keys(this.isSpecialMode ? this.specialCommands : this.commands)
+              .filter(cmd => cmd.startsWith(currentWord))
+              .map(cmd => cmd.slice(currentWord.length));
+          case 'cd':
+            return fileSystem.ls(this.context)
+              .filter(f => f.type === 'directory' && f.name.startsWith(currentWord))
+              .map(f => f.name.slice(currentWord.length));
+          case 'cat':
+          case 'rm':
+          case 'cp':
+          case 'mv':
+            return fileSystem.ls(this.context)
+              .filter(f => f.name.startsWith(currentWord))
+              .map(f => f.name.slice(currentWord.length));
+          case 'mkdir':
+            return [];
+          case 'touch':
+            return fileSystem.ls(this.context)
+              .filter(f => f.name.startsWith(currentWord))
+              .map(f => f.name.slice(currentWord.length));
+          case 'calc':
+            if (this.isSpecialMode) {
+              return ['+', '-', '*', '/', '%']
+                .filter(op => op.startsWith(currentWord))
+                .map(op => op.slice(currentWord.length));
+            }
+            return [];
+          default:
+            return [];
+        }
+      }
+      handleTab() {
+        if (this.currentHint) {
+          const hintText = this.currentHint.textContent;
+          this.input.textContent += hintText;
+          this.currentHint.remove();
+          this.currentHint = null;
+          this.updateHint();
+          this.placeCaretAtEnd(this.input);
+        }
+      }
+      mv(args) {
+        if (args.length < 2) {
+          throw new Error('Usage: mv [source] [target]');
+        }
+        const [source, target] = args;
+        const success = fileSystem.mv(fileSystem.getResolvedPath(this.context.path, source), fileSystem.getResolvedPath(this.context.path, target));
+        if (success) {
+          this.addOutputLine(`Moved '${source}' to '${target}'`);
+        }
+      }
+      cp(args) {
+        if (args.length < 2) {
+          throw new Error('Usage: cp [source] [target]');
+        }
+        const [source, target] = args;
+        const success = fileSystem.cp(this.context.path, source, target);
+        if (success) {
+          this.addOutputLine(`Copied '${source}' to '${target}'`);
+        }
+      }
+      async download(args) {
+        if (args.length < 1) throw new Error('Usage: download [url] [filename]');
+        const [url, filePath] = args;
+        try {
+          const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(url);
+          this.addOutputLine(`Starting download via proxy: ${url}`, 'info');
+          const fullPath = fileSystem.getResolvedPath(this.context.path, filePath || url.split('/').pop());
+          const progressBar = this.createProgressBar(fullPath);
+          const response = await fetch(proxyUrl);
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          if (!response.body) throw new Error('No response body');
+          const total = parseInt(response.headers.get('Content-Length') || '0');
+          const reader = response.body.getReader();
+          const chunks = [];
+          let loaded = 0;
+          while (true) {
+            const {
+              done,
+              value
+            } = await reader.read();
+            if (done) break;
+            chunks.push(value);
+            loaded += value.length;
+            const percent = total > 0 ? (loaded / total) * 100 : 0;
+            this.updateProgressBar(progressBar, percent, loaded, total, fullPath);
+          }
+          const blob = new Blob(chunks);
+          const content = new Uint8Array(await blob.arrayBuffer());
+          const success = fileSystem.writeFile(fullPath, content, true);
+          if (!success) throw new Error('Failed to save file');
+          this.addOutputLine(`Download complete: ${fullPath}`, 'success');
+        } catch (error) {
+          this.addOutputLine(`Download failed: ${error.message}`, 'error');
+        }
+      }
+    }
+    class TextEditor {
+      constructor(path = null) {
+        this.path = path;
+        this.name = path?.split('/').pop();
+        this.app = new Modal(`${name || 'New File'} - Text Editor`);
+        this.app.setApp();
+        this.app.setupInfoBtn('Text Editor',
+          'The Text Editor is a simple tool for creating and editing text files. You can type and edit content and save your work directly to the file system. It supports keyboard shortcuts like **Ctrl+S** to save and **Ctrl+N** to create a new file. It also provides a warning before you exit with unsaved changes.'
+        );
+        this.textarea = document.createElement('textarea');
+        this.textarea.className = 'text-editor';
+        this.textarea.spellcheck = false;
+        const toolbar = this.createToolbar();
+        const infoBar = this.createInfoBar();
+        this.app.appMain.appendChild(toolbar);
+        this.app.appMain.appendChild(this.textarea);
+        this.app.appMain.appendChild(infoBar);
+        this.setupEventListeners();
+        if (path) {
+          this.loadFileContent();
+        }
+      }
+      createToolbar() {
+        const toolbar = document.createElement('div');
+        toolbar.className = 'editor-toolbar';
+        const fileMenu = document.createElement('div');
+        fileMenu.className = 'file-menu';
+        const fileBtn = document.createElement('button');
+        fileBtn.innerHTML = icons.fileText + ' File';
+        const dropdown = document.createElement('div');
+        dropdown.className = 'dropdown-content';
+        const newBtn = document.createElement('button');
+        newBtn.innerHTML = 'New File <span class="btnKeyInfo">Ctrl+N</span>';
+        newBtn.onclick = () => this.newFile();
+        const saveBtn = document.createElement('button');
+        saveBtn.innerHTML = 'Save <span class="btnKeyInfo">Ctrl+S</span>';
+        saveBtn.onclick = () => this.saveFile();
+        const saveAsBtn = document.createElement('button');
+        saveAsBtn.innerHTML = 'Save As...';
+        saveAsBtn.onclick = () => this.saveFile(true);
+        dropdown.appendChild(newBtn);
+        dropdown.appendChild(saveBtn);
+        dropdown.appendChild(saveAsBtn);
+        fileMenu.appendChild(fileBtn);
+        fileMenu.appendChild(dropdown);
+        toolbar.appendChild(fileMenu);
+        fileBtn.onclick = (e) => {
+          e.stopPropagation();
+          dropdown.classList.toggle('show');
+        };
+        document.addEventListener('click', (e) => {
+          dropdown.classList.remove('show');
+        });
+        return toolbar;
+      }
+      createInfoBar() {
+        const infoBar = document.createElement('div');
+        infoBar.className = 'editor-info-bar';
+        infoBar.innerHTML = `
+          <div class="info-item" data-info="lines">Lines: 0</div>
+          <div class="info-item" data-info="chars">Chars: 0</div>
+          <div class="info-item" data-info="size">Size: 0 B</div>
+          <div class="info-item" data-info="encoding">UTF-8</div>
+        `;
+        return infoBar;
+      }
+      updateInfoBar() {
+        const lines = this.textarea.value.split('\n').length;
+        const chars = this.textarea.value.length;
+        const size = new TextEncoder().encode(this.textarea.value).length;
+        this.app.appMain.querySelector('[data-info="lines"]').textContent = `Lines: ${lines}`;
+        this.app.appMain.querySelector('[data-info="chars"]').textContent = `Chars: ${chars}`;
+        this.app.appMain.querySelector('[data-info="size"]').textContent = `Size: ${fileSystem.formatSize(size)}`;
+        const file = fileSystem._resolvePath(this.path);
+        this.app.appMain.querySelector('[data-info="encoding"]').textContent = (file?.type === "file" && file.parameters) ? file.parameters.encoding : "UTF-8";
+      }
+      setupEventListeners() {
+        this.textarea.addEventListener('keydown', (e) => {
+          if (e.ctrlKey) {
+            switch (e.key.toLowerCase()) {
+              case 's':
+                e.preventDefault();
+                this.saveFile();
+                break;
+              case 'n':
+                e.preventDefault();
+                this.newFile();
+                break;
+            }
+          }
+        });
+        this.textarea.addEventListener('keyup', () => this.updateInfoBar());
+        this.app.setupExitBtn(async () => {
+          if (this.textarea.value && confirm('Save changes before exit?')) {
+            await this.saveFile();
+          }
+        });
+      }
+      async loadFileContent() {
+        try {
+          let content = await fileSystem.asyncReadFile(this.path);
+          this.textarea.value = await fileSystem.decodeContent(content, 'text');
+          this.app.updateTitle(`${this.name} - Text Editor`);
+          this.updateInfoBar();
+        } catch (error) {
+          ththis.showStatus(`Error loading file: ${error.message}`, 'error');
+        }
+      }
+      async saveFile(isSaveAs = false) {
+        try {
+          const newPath = (isSaveAs || !this.path) ?
+            prompt('Enter file path:', '/home/untitled.txt') :
+            this.path;
+          if (!newPath) return;
+          const dirPath = newPath.split('/').slice(0, -1).join('/');
+          fileSystem.mkdirp(dirPath);
+          const success = fileSystem.writeFile(newPath, this.textarea.value);
+          if (success) {
+            this.path = newPath;
+            this.app.updateTitle(`${this.path} - Text Editor`);
+            this.showStatus('File saved successfully!', 'success');
+          } else {
+            throw new Error('Failed to save file');
+          }
+        } catch (error) {
+          this.showStatus(`Error: ${error.message}`, 'error');
+        }
+      }
+      newFile() {
+        if (this.textarea.value && !confirm('Discard current changes?')) {
+          return;
+        }
+        this.path = '';
+        this.textarea.value = '';
+        this.app.updateTitle('New File - Text Editor');
+        this.updateInfoBar();
+      }
+      showStatus(message, type = 'info') {
+        let statusBar = this.app.appMain.querySelector('.status-bar');
+        if (statusBar) {
+          removeStatus(statusBar);
+        }
+        statusBar = document.createElement('div');
+        this.app.appMain.appendChild(statusBar);
+        statusBar.textContent = message;
+        statusBar.className = `status-bar ${type}`;
+        setTimeout(() => statusBar.classList.add('show'), 0);
+        setTimeout(() => {
+          removeStatus(statusBar);
+        }, 3000);
+        
+        function removeStatus(status) {
+          status?.classList?.remove('show');
+          setTimeout(() => status?.remove(), 500);
+        }
+      }
+    }
+  </script>
+</body>
+
+</html>
