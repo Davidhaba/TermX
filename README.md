@@ -1,8 +1,8 @@
 # TermX (MacOS)
 
-##TermX: A Web-Based macOS Terminal and File System Simulator
-TermX is an interactive, web-based simulator that emulates the look and feel of a macOS terminal and file explorer. It's a fun and practical project designed to showcase a modern, dynamic web application that operates a virtual file system directly in your browser. This project is perfect for anyone interested in exploring command-line interfaces, file management, or just wants to play around with a virtual environment without touching their actual computer.
-Features
+TermX: A Web-Based macOS Terminal and File System Simulator
+TermX is an interactive web-based simulator that emulates the look and feel of a macOS terminal and file explorer. It's a fun and practical project designed to showcase a modern, dynamic web application that operates a virtual file system directly in your browser. This project is perfect for anyone interested in exploring command-line interfaces, file management, or just wants to play around with a virtual environment without touching their actual computer.
+Key Features
 TermX provides a robust set of features that mimic a real operating system environment, all within your web browser.
 Interactive Terminal
 The core of TermX is its fully functional terminal. You can run classic Unix-like commands to navigate the file system and manage files:
@@ -32,7 +32,7 @@ How to Use
 To start using TermX, simply visit the live page. All the tools and applications are ready to use directly in your browser without any installation required.
 🚀 Explore TermX Live: https://davidhaba.github.io/TermX/
 Credits
-This project was developed by [Your Name] as a demonstration of front-end development skills, including:
+This project was developed by David Haba as a demonstration of front-end development skills, including:
  * JavaScript: For all the logic, dynamic content, and virtual file system management.
  * HTML & CSS: For creating the user interface and styling the macOS-like environment.
 We hope you enjoy using TermX! If you have any suggestions for new features, please open an issue in this repository.
