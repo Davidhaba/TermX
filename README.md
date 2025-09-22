@@ -1,6 +1,6 @@
 # TermX (MacOS)
 
-TermX: A Web-Based macOS Terminal and File System Simulator
+##TermX: A Web-Based macOS Terminal and File System Simulator
 TermX is an interactive, web-based simulator that emulates the look and feel of a macOS terminal and file explorer. It's a fun and practical project designed to showcase a modern, dynamic web application that operates a virtual file system directly in your browser. This project is perfect for anyone interested in exploring command-line interfaces, file management, or just wants to play around with a virtual environment without touching their actual computer.
 Features
 TermX provides a robust set of features that mimic a real operating system environment, all within your web browser.
