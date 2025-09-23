@@ -13,7 +13,7 @@
   <script src="main.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
   <script>
-    const ver = 'v2.8.7',
+    const ver = 'v2.8.7.1',
       username = 'root',
       icons = {
         arrowUp: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M7 11.0001L12 6.00006L17 11.0001M12 18.0001V6.00006" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
@@ -622,10 +622,10 @@ Proceed with execution only if you are ABSOLUTELY sure this file is safe?`;
         return '/' + parts.join('/');
       }
       async unarchive(file, onProgress) {
-        const content = await this.decodeContent(file.content, 'arraybuffer');
         const zip = new JSZip();
         const files = [];
         try {
+          const content = await this.decodeContent(file.content, 'arraybuffer');
           const loadedZip = await zip.loadAsync(content, {
             update: function(metadata) {
               if (onProgress) {
