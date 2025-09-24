@@ -788,6 +788,7 @@ body {
   cursor: pointer;
   font-size: 14px;
   transition: all 0.2s ease;
+  white-space: nowrap;
 }
 
 .menu-item:hover {
@@ -798,21 +799,33 @@ body {
   width: 18px;
   height: 18px;
   margin-right: 10px;
-  fill: currentColor;
+}
+
+.menu-item.open {
+  color: #66ffcc;
+}
+.menu-item.open-as {
+  color: #ff99ff;
+}
+.menu-item.open-folder {
+  color: #ffaa66;
+}
+.menu-item.copyPath {
+  color: #ffff66;
+}
+.menu-item.rename {
+  color: #66ff66;
 }
 
 .menu-item.delete {
   color: #ff6666;
 }
-
 .menu-item.new-folder {
   color: #66b3ff;
 }
-
 .menu-item.new-file {
   color: #88ff88;
 }
-
 .menu-item.refresh {
   color: #ffcc66;
 }

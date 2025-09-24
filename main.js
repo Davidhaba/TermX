@@ -537,15 +537,22 @@ class FileExplorer {
     
     let html = "";
     if (this.selectedItem) {
-      html += `<div class="menu-item open">${icons.open}Open</div>`;
-      if (file && file.type === "file")
-        html += `<div class="menu-item open-as">${icons.openAs}Open as</div>`;
-      html += `<div class="menu-item rename">${icons.rename}Rename</div>
-                 <div class="menu-item delete">${icons.delete}Delete</div>`;
+      if (file) {
+        if (file.type === "file") {
+          html += `<div class="menu-item open">${icons.openFile}Open file</div>
+            <div class="menu-item open-as">${icons.openAs}Open as</div>`;
+        } else {
+          html += `<div class="menu-item open">${icons.openFolder}Open Folder</div>`;
+        }
+        html += `<div class="menu-item copyPath">${icons.copy}Copy File Path</div>
+          <div class="menu-item rename">${icons.rename}Rename</div>
+          <div class="menu-item delete">${icons.delete}Delete</div>`;
+      }
     } else {
       html += `<div class="menu-item refresh">${icons.refresh}Refresh</div>
                  <div class="menu-item new-folder">${icons.newFolder}New Folder</div>
-                 <div class="menu-item new-file">${icons.newFile}New File</div>`;
+                 <div class="menu-item new-file">${icons.newFile}New File</div>
+                 <div class="menu-item copyPath">${icons.copy}Copy Current Path</div>`;
     }
     this.contextMenu.innerHTML = html;
     if (this.selectedItem) {
@@ -566,6 +573,8 @@ class FileExplorer {
       this.contextMenu.querySelector(".new-file").onclick = () =>
         this.createNewFile();
     }
+    this.contextMenu.querySelector(".copyPath").onclick = () =>
+        this.copyPath();
     this.appMain.appendChild(this.contextMenu);
     const r = this.modWindow.getBoundingClientRect();
     const x = Math.max(
@@ -646,6 +655,11 @@ class FileExplorer {
       fileSystem.rm(this.context.path, this.selectedItem, true);
       this.updateUI();
     }
+  }
+  async copyPath() {
+    let path = this.context.path;
+    if (this.selectedItem) path = fileSystem.getResolvedPath(path, this.selectedItem);
+    await copyText(path);
   }
 }
 
