@@ -31,6 +31,14 @@ class Desktop {
         class: "video",
         icon: icons.video,
         handler: () => fileSystem.openFile(path + 'lion_video.mp4', 'video')
+      },
+      gitHubLink: {
+        name: "Open Source",
+        icon: icons.github,
+        handler: () => {
+          if (confirm("You will be redirected to the open-source code page on GitHub. \nPlease confirm the action."))
+            window.open('https://github.com/Davidhaba/TermX', '_blank');
+        }
       }
     };
     Object.entries(this.apps).forEach(([id, app]) => {
