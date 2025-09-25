@@ -14,7 +14,7 @@
   <script src="main.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
   <script>
-    const ver = 'v2.9.1',
+    const ver = 'v2.9.1.1',
       username = 'root',
       icons = {
         arrowUp: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M7 11.0001L12 6.00006L17 11.0001M12 18.0001V6.00006" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
@@ -1685,11 +1685,12 @@ Proceed with execution only if you are ABSOLUTELY sure this file is safe?`;
         return await fileSystem.decodeContent(await fileSystem.asyncReadFile(this.path), "text");
       }
       async checkChanges() {
-        const text = this.textarea.value;
+        const text = this.textarea.value || "";
         if (!this.path) {
           if (text) return true;
         } else {
-          if (await this.getFileContent() !== text) {
+          const cont = await this.getFileContent() || "";
+          if (cont !== text) {
             return true;
           }
         }
