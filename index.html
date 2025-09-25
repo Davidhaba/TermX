@@ -14,7 +14,7 @@
   <script src="main.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
   <script>
-    const ver = 'v2.9',
+    const ver = 'v2.9.1',
       username = 'root',
       icons = {
         arrowUp: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M7 11.0001L12 6.00006L17 11.0001M12 18.0001V6.00006" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
@@ -1604,7 +1604,9 @@ Proceed with execution only if you are ABSOLUTELY sure this file is safe?`;
         dropdown.className = 'dropdown-content';
         const newBtn = document.createElement('button');
         newBtn.innerHTML = 'New File <span class="btnKeyInfo">Ctrl+N</span>';
-        newBtn.onclick = () => this.newFile();
+        newBtn.onclick = async () => {
+          await this.newFile();
+        }
         const saveBtn = document.createElement('button');
         saveBtn.innerHTML = 'Save <span class="btnKeyInfo">Ctrl+S</span>';
         saveBtn.onclick = () => this.saveFile();
@@ -1665,20 +1667,33 @@ Proceed with execution only if you are ABSOLUTELY sure this file is safe?`;
         });
         this.textarea.addEventListener('keyup', () => this.updateInfoBar());
         this.app.setupExitBtn(async () => {
-          if (this.textarea.value && confirm('Save changes before exit?')) {
+          if (await this.checkChanges() && confirm('Save changes before exit?')) {
             await this.saveFile();
           }
         });
       }
       async loadFileContent() {
         try {
-          let content = await fileSystem.asyncReadFile(this.path);
-          this.textarea.value = await fileSystem.decodeContent(content, 'text');
+          this.textarea.value = await this.getFileContent();
           this.app.updateTitle(`${this.name} - Text Editor`);
           this.updateInfoBar();
         } catch (error) {
           ththis.showStatus(`Error loading file: ${error.message}`, 'error');
         }
+      }
+      async getFileContent() {
+        return await fileSystem.decodeContent(await fileSystem.asyncReadFile(this.path), "text");
+      }
+      async checkChanges() {
+        const text = this.textarea.value;
+        if (!this.path) {
+          if (text) return true;
+        } else {
+          if (await this.getFileContent() !== text) {
+            return true;
+          }
+        }
+        return false;
       }
       async saveFile(isSaveAs = false) {
         try {
@@ -1700,8 +1715,8 @@ Proceed with execution only if you are ABSOLUTELY sure this file is safe?`;
           this.showStatus(`Error: ${error.message}`, 'error');
         }
       }
-      newFile() {
-        if (this.textarea.value && !confirm('Discard current changes?')) {
+      async newFile() {
+        if (await this.checkChanges() && !confirm('Discard current changes?')) {
           return;
         }
         this.path = '';
