@@ -14,7 +14,7 @@
   <script src="main.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
   <script>
-    const ver = 'v2.9.1.1',
+    const ver = 'v3.0',
       username = 'root',
       icons = {
         arrowUp: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M7 11.0001L12 6.00006L17 11.0001M12 18.0001V6.00006" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
@@ -105,20 +105,40 @@
     }
     class FileSystem {
       constructor() {
-        this.globalRoot = this.createDirectory('root', { isSystem: true });
-        this.globalRoot.children.push(this.createDirectory('home'));
-        if (!this.exists(this.globalRoot.children, 'home')) {
-          throw new Error('Failed to initialize home directory');
+        const savefs = this.getFileSystem();
+        if (savefs !== null) {
+          this.globalRoot = savefs;
+        } else {
+          this.globalRoot = this.createDirectory('root', { isSystem: true });
+          this.globalRoot.children.push(this.createDirectory('home'));
+          const binDir = this.createDirectory('bin', { isSystem: true });
+          this.globalRoot.children.push(binDir);
+          binDir.children.push(...[
+            this.createFile('lion_photo.png',
+              'https://dl.dropbox.com/scl/fi/5mgu2ty49y9xhvvm10b7k/1757933368173.jpg?rlkey=pfj4dtp5dfqkcvud6cs57ertk&st=qq0koisz'),
+            this.createFile('lion_video.mp4', 'https://dl.dropbox.com/scl/fi/5r13hlefcadlrm7qu43na/lion.mp4?rlkey=2tuwue1qtf3xjoy8kwdf1qzwj'),
+            this.createFile('Kamin - ZetaMix (Sloved Reverb).mp3',
+              'https://dl.dropbox.com/scl/fi/a1rrytd8dggp07mug6kue/kamin.mp3?rlkey=b0bxdstk8eje3jj4z4uua54e5&st=gse4q6vp')
+          ]);
         }
-        const binDir = this.createDirectory('bin', { isSystem: true });
-        this.globalRoot.children.push(binDir);
-        binDir.children.push(...[
-          this.createFile('lion_photo.png',
-            'https://dl.dropbox.com/scl/fi/5mgu2ty49y9xhvvm10b7k/1757933368173.jpg?rlkey=pfj4dtp5dfqkcvud6cs57ertk&st=qq0koisz'),
-          this.createFile('lion_video.mp4', 'https://dl.dropbox.com/scl/fi/5r13hlefcadlrm7qu43na/lion.mp4?rlkey=2tuwue1qtf3xjoy8kwdf1qzwj'),
-          this.createFile('Kamin - ZetaMix (Sloved Reverb).mp3',
-            'https://dl.dropbox.com/scl/fi/a1rrytd8dggp07mug6kue/kamin.mp3?rlkey=b0bxdstk8eje3jj4z4uua54e5&st=gse4q6vp')
-        ]);
+        if (!this.exists(this.globalRoot.children, 'bin')) {
+          throw new Error('Failed to initialize file system');
+        }
+      }
+      saveFileSystem() {
+        try {
+          localStorage.setItem("savefs", JSON.stringify(this.globalRoot));
+          return true;
+        } catch {
+          return false;
+        }
+      }
+      getFileSystem() {
+        try {
+          return JSON.parse(localStorage.getItem("savefs"));
+        } catch {
+          return null;
+        }
       }
       asyncReadFile(path) {
         return new Promise((resolve, reject) => {
@@ -275,6 +295,7 @@
         if (!this.exists(targetDir.children, name)) {
           const newFile = this.createFile(name);
           targetDir.children.push(newFile);
+          this.saveFileSystem();
           return true;
         }
         return false;
@@ -294,6 +315,7 @@
           throw new Error("Can't remove system file");
         }
         targetDir.children.splice(index, 1);
+        this.saveFileSystem();
         return true;
       }
       writeFile(fullPath, content, isBinary = false) {
@@ -312,6 +334,7 @@
           const newFile = this.createFile(fileName, content, { isBinary: isBinary });
           currentDir.children.push(newFile);
         }
+        this.saveFileSystem();
         return true;
       }
       
@@ -355,6 +378,7 @@
         sourceParent.children = sourceParent.children.filter(item => item !== source);
         source.name = targetName;
         targetParent.children.push(source);
+        this.saveFileSystem();
         return true;
       }
       
@@ -372,6 +396,7 @@
         const copy = this._deepCopy(source);
         copy.name = targetName;
         targetParent.children.push(copy);
+        this.saveFileSystem();
         return true;
       }
       getItemSize(item) {
@@ -1325,7 +1350,8 @@ Proceed with execution only if you are ABSOLUTELY sure this file is safe?`;
         if (args.length === 0) {
           throw new Error('Please specify filename');
         }
-        const content = await fileSystem.decodeContent(fileSystem.readFile(fileSystem.getResolvedPath(this.context.path, args[0]), { asText: true }), 'text');
+        const content = await fileSystem.decodeContent(fileSystem.readFile(fileSystem.getResolvedPath(this.context.path, args[0]), { asText: true }),
+          'text');
         if (content === null) {
           throw new Error(`File '${args[0]}' not found`);
         }
