@@ -1,0 +1,159 @@
+/*
+ * ==============================================================================
+ * TERM X PROJECT DOCUMENTATION (v2.8.7.1)
+ * ==============================================================================
+ *
+ * This documentation describes the key classes and methods for working with the
+ * virtual file system and user interface of the TermX project.
+ *
+ * ------------------------------------------------------------------------------
+ * I. GLOBAL UTILITIES & CONSTANTS
+ * ------------------------------------------------------------------------------
+ *
+ * Globally accessible (defined in the <script> block of index.html):
+ *
+ * @constant {string} ver
+ * The current software version (e.g., 'v2.8.7.1').
+ *
+ * @constant {string} username
+ * The current terminal user's name ('root').
+ *
+ * @constant {object} icons
+ * An object containing all SVG icons available for use within the applications.
+ *
+ *
+ * ------------------------------------------------------------------------------
+ * II. CORE CLASSES
+ * ------------------------------------------------------------------------------
+ *
+ *
+ * A. CLASS FileSystem
+ * ------------------------------------------------------------------------------
+ * Manages the entire virtual file system, including saving/loading via
+ * localStorage and file/archive operations.
+ *
+ * 1. SAVING/LOADING:
+ *
+ * @method saveFileSystem()
+ * Saves the current state of this.globalRoot to localStorage (as JSON string).
+ * @returns {boolean} True if saving was successful.
+ *
+ * @method getFileSystem()
+ * Loads and parses the JSON string from localStorage back into an object.
+ * @returns {object|null} The root directory object or null.
+ *
+ * 2. FILE HANDLING:
+ *
+ * @method readFile(path)
+ * Retrieves file metadata by its full path.
+ * @param {string} path - The full path to the file.
+ * @returns {object|null} The file object or null.
+ *
+ * @method writeFile(path, content, isBinary)
+ * Creates or overwrites a file.
+ * @param {string} path - The file path, including the name.
+ * @param {Uint8Array|string} content - The file content.
+ * @param {boolean} isBinary - True if the content is binary (Uint8Array).
+ * @returns {boolean} True if successful.
+ *
+ * @method decodeContent(content, outputFormat)
+ * Decodes file content (Blob, ArrayBuffer, URL) into the required format.
+ * @param {Blob|Uint8Array|string} content - The initial content.
+ * @param {'url'|'text'|'blob'|'arraybuffer'} outputFormat - The target format.
+ * @returns {Promise<string|Blob|ArrayBuffer>} The decoded content.
+ *
+ * 3. ARCHIVES:
+ *
+ * @async @method unarchive(file, onProgress)
+ * Unpacks a supported archive (zip, tar, tar.gz) into the current directory.
+ * Uses JSZip, pako, tar.js.
+ * @param {object} file - The file object from this.globalRoot.
+ * @param {function(processedBytes, totalBytes)} onProgress - Callback for the progress bar.
+ * @returns {Promise<Array>} An array of extracted objects: {path, content, isDirectory}.
+ *
+ *
+ * B. CLASS Desktop
+ * ------------------------------------------------------------------------------
+ * Manages application launching and desktop icons.
+ *
+ * @property {object} apps
+ * A map of registered applications ({id: {name, class, icon, handler}}).
+ *
+ * @method createDesktopIcon(app)
+ * Creates a desktop icon. Uses app.handler to launch the application.
+ *
+ *
+ * C. CLASS Terminal
+ * ------------------------------------------------------------------------------
+ * Simulates the macOS console, processes commands, and manages state.
+ *
+ * @property {object} commands
+ * A map of user-available commands (ls, cd, unarchive, help...).
+ *
+ * @method addOutputLine(text, type)
+ * Adds a line to the terminal output.
+ * @param {string} type - 'info', 'success', 'error'.
+ *
+ * @async @method unarchive(args)
+ * Terminal wrapper for FileSystem.unarchive. Handles command line arguments
+ * and displays the progress bar.
+ *
+ *
+ * D. CLASS TextEditor
+ * ------------------------------------------------------------------------------
+ * The text editor with saving and change checking functionalities.
+ *
+ * @method openFile(path, content)
+ * Loads file content into this.textarea and saves this.originalContent
+ * for change detection.
+ *
+ * @async @method saveFile()
+ * Saves the current textarea content to the virtual file system.
+ *
+ * @method checkChanges()
+ * Checks if the current this.textarea.value differs from the
+ * initial this.originalContent.
+ * @returns {boolean} True if there are unsaved changes.
+ *
+ * @method newFile()
+ * Resets the editor to a new file state.
+ *
+ *
+ * E. CLASS Dialog (Custom Modal)
+ * ------------------------------------------------------------------------------
+ * An asynchronous custom modal dialog for capturing user choices.
+ *
+ * @constructor
+ * @param {string} title - The window title.
+ * @param {string} main_message - The primary question text.
+ * @param {string} details - Additional details (under the main text).
+ * @param {('error'|'warning'|'question'|'info')} icon - The icon type.
+ * @param {Array<string>} buttons - Array of button labels.
+ * @param {string} active_button - The label of the button to be highlighted as primary.
+ *
+ * @async @returns {Promise<string>} Returns the label of the clicked button.
+ *
+ * USAGE EXAMPLE:
+ *
+ * new Dialog(
+ * 'Unsaved Changes',                      // title
+ * 'Save changes before closing the file?', // main_message
+ * 'Unsaved data will be lost if you proceed without saving.', // details
+ * 'warning',                              // icon
+ * ['Cancel', 'Don\'t Save', 'Save'],      // buttons
+ * 'Save'                                  // active_button (primary button)
+ * ).then(answer => {
+ * if (answer === 'Save') {
+ * // Saving logic
+ * } else if (answer === 'Don\'t Save') {
+ * // Logic to disregard changes and close
+ * } else {
+ * // Logic to cancel the operation
+ * }
+ * });
+ *
+ *
+ * ==============================================================================
+ * END OF DOCUMENTATION
+ * ==============================================================================
+ */

@@ -1,3 +1,4 @@
+
 class Desktop {
   constructor() {
     const path = '/bin/';
@@ -143,12 +144,12 @@ class Modal {
       }
     }, 300);
   }
-  setupInfoBtn(title, text) {
+  setupInfoBtn(name, text) {
     if (!text) return;
     const button = document.createElement("div");
     button.className = "control info";
     button.innerHTML = "i";
-    button.onclick = () => { new InfoModal(title, text); };
+    button.onclick = () => { new Dialog(name, `What is ${name}?`, text, 'info', ['Ok'], 'Ok'); };
     this.titleBar.appendChild(button);
   }
   handleMinimize(toggle = true) {
@@ -277,24 +278,45 @@ class Modal {
   }
 }
 
-class InfoModal {
-  constructor(title, text) {
-    const app = new Modal(title);
-    app.appMain.classList.add("padd");
-    app.setupExitBtn();
-    const textContent = document.createElement('p');
-    textContent.style.margin = "0";
-    textContent.textContent = text;
-    const buttonContainer = document.createElement('div');
-    buttonContainer.className = "info-modal-buttons";
-    const okButton = document.createElement('button');
-    okButton.className = "info-modal-ok-button";
-    okButton.textContent = "OK";
-    buttonContainer.appendChild(okButton);
-    app.appMain.appendChild(textContent);
-    app.appMain.appendChild(buttonContainer);
-    okButton.addEventListener('click', () => {
-      app.handleClose();
+class Dialog {
+  constructor(title, mainMessage, details, iconType, buttons, primaryButton) {
+    return new Promise(resolve => {
+      const app = new Modal(title);
+      const appMain = app.appMain;
+      app.modWindow.classList.add('dialog');
+      appMain.classList.add("padd");
+      const standart = 'Cancel';
+      app.setupExitBtn(async () => {
+        resolve(standart);
+      });
+      
+      const buttonsHtml = buttons.map(label => {
+        const isPrimary = label === primaryButton;
+        const primaryClass = isPrimary ? ' primary' : '';
+        return `<button class="mac-btn${primaryClass}" data-action="${label}">${label}</button>`;
+      }).join('');
+      appMain.innerHTML = `
+                              <div class="icon-section">${icons[iconType] || ''}</div>
+                                <div class="message-section">
+                                    <h2>${mainMessage}</h2>
+                                    <p>${details}</p>
+                                </div>
+                              `;
+      const footer = document.createElement('div');
+      footer.className = 'button-bar';
+      footer.classList.add('title-bar');
+      footer.innerHTML = buttonsHtml;
+      app.modWindow.appendChild(footer);
+      const closeDialog = (result) => {
+        app.handleClose();
+        resolve(result);
+      };
+      footer.querySelectorAll('[data-action]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const action = e.target.getAttribute('data-action') || standart;
+          closeDialog(action);
+        });
+      });
     });
   }
 }
@@ -582,7 +604,7 @@ class FileExplorer {
         this.createNewFile();
     }
     this.contextMenu.querySelector(".copyPath").onclick = () =>
-        this.copyPath();
+      this.copyPath();
     this.appMain.appendChild(this.contextMenu);
     const r = this.modWindow.getBoundingClientRect();
     const x = Math.max(
