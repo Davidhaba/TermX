@@ -45,7 +45,7 @@ TermX is an interactive, web-based simulator that emulates the look and feel of 
    touch hello.txt
    echo "Welcome to TermX" > hello.txt
    cat hello.txt
-```
+
 
 1. Right-click in File Explorer for context menu options
 2. Double-click files to open with appropriate applications
