@@ -1,4 +1,3 @@
-
 class Desktop {
   constructor() {
     const path = '/bin/';
@@ -102,15 +101,37 @@ class Modal {
     this.titleBar.addEventListener("touchstart", (e) => this.startDragging(e), {
       passive: false
     });
-    this.modWindow.addEventListener("mousedown", () => this.setActiveWindow());
-    this.modWindow.addEventListener("touchstart", () => this.setActiveWindow());
+    this.modWindow.addEventListener("mousedown", (e) => {
+      if (this.isBlocked) {
+        e.preventDefault();
+        if (this.dialogApp) this.dialogApp.setActiveWindow();
+        return;
+      }
+      this.setActiveWindow();
+    });
+    this.modWindow.addEventListener("touchstart", (e) => {
+      if (this.isBlocked) {
+        e.preventDefault();
+        if (this.dialogApp) this.dialogApp.setActiveWindow();
+        return;
+      }
+      this.setActiveWindow();
+    });
     this.modWindow.addEventListener("keydown", (e) => {
       if (e.key === "Escape") this.handleClose();
+    });
+    this.modWindow.addEventListener("click", (e) => {
+      if (this.isBlocked) {
+        e.preventDefault();
+        if (this.dialogApp) this.dialogApp.setActiveWindow();
+      }
     });
     this.modWindow.style.left = `${Math.random() * 50 + 10}px`;
     this.modWindow.style.top = `${Math.random() * 50 + 10}px`;
     this.transitionTimer = null;
     this.activeTouchId = null;
+    this.isBlocked = false;
+    this.dialogApp = null;
     this.setActiveWindow();
     this.updateTitle(title);
   }
@@ -152,6 +173,13 @@ class Modal {
     button.onclick = () => { new Dialog(name, `What is ${name}?`, text, 'info', ['Ok'], 'Ok'); };
     this.titleBar.appendChild(button);
   }
+  blockWindow() {
+    this.isBlocked = true;
+  }
+  unblockWindow() {
+    this.isBlocked = false;
+    this.setActiveWindow();
+  }
   handleMinimize(toggle = true) {
     if (toggle) {
       this.isMinimized = !this.isMinimized;
@@ -191,7 +219,7 @@ class Modal {
     }, 300);
   }
   startDragging(e) {
-    if (this.isMinimized || e.target.closest(".controls") || e.target.closest(".control")) return;
+    if (this.isBlocked || this.isMinimized || e.target.closest(".controls") || e.target.closest(".control")) return;
     if (e.cancelable) e.preventDefault();
     this.handleMaximize(false);
     if (e.type === "touchstart") {
@@ -279,7 +307,7 @@ class Modal {
 }
 
 class Dialog {
-  constructor(title, mainMessage, details, iconType, buttons, primaryButton) {
+  constructor(title, mainMessage, details, iconType, buttons, primaryButton, parentModal = null) {
     return new Promise(resolve => {
       const app = new Modal(title);
       const appMain = app.appMain;
@@ -287,9 +315,13 @@ class Dialog {
       appMain.classList.add("padd");
       const standart = 'Cancel';
       app.setupExitBtn(async () => {
-        resolve(standart);
+        closeDialog(standart);
+        return false;
       });
-      
+      if (parentModal) {
+        parentModal.blockWindow();
+        parentModal.dialogApp = app;
+      }
       const buttonsHtml = buttons.map(label => {
         const isPrimary = label === primaryButton;
         const primaryClass = isPrimary ? ' primary' : '';
@@ -308,6 +340,9 @@ class Dialog {
       footer.innerHTML = buttonsHtml;
       app.modWindow.appendChild(footer);
       const closeDialog = (result) => {
+        if (parentModal) {
+          parentModal.unblockWindow();
+        }
         app.handleClose();
         resolve(result);
       };
@@ -564,7 +599,6 @@ class FileExplorer {
     }
     this.contextMenu = document.createElement("div");
     this.contextMenu.className = "context-menu";
-    
     let html = "";
     if (this.selectedItem) {
       if (file) {
@@ -593,8 +627,10 @@ class FileExplorer {
         this.openAsSelected();
       this.contextMenu.querySelector(".rename").onclick = () =>
         this.renameSelected();
-      this.contextMenu.querySelector(".delete").onclick = () =>
-        this.deleteSelected();
+      this.contextMenu.querySelector(".delete").onclick = async () => {
+        await this.deleteSelected();
+        this.clearSelection();
+      }
     } else {
       this.contextMenu.querySelector(".refresh").onclick = () =>
         this.updateUI();
@@ -624,7 +660,7 @@ class FileExplorer {
     this.contextMenu.style.left = `${x}px`;
     this.contextMenu.style.top = `${y}px`;
     document.addEventListener("click", (e) => {
-      if (e.target.closest(".context-menu")) this.clearSelection();
+      if (e.target.closest(".context-menu") && !e.target.closest(".delete")) this.clearSelection();
       this.contextMenu?.remove();
     }, { once: true });
   }
@@ -654,8 +690,8 @@ class FileExplorer {
           const newPath = fileSystem.cd(this.context.path, file.name);
           this.context.path = newPath;
           this.updateUI();
-        } catch (error) {
-          console.error(error.message);
+        } catch (e) {
+          new Dialog('File Explorer - Error', 'An error occurred', e.message, 'error', ['Ok'], 'Ok', this.app);
         }
       } else {
         fileSystem.openFile(this.context.path + '/' + file.name);
@@ -676,20 +712,30 @@ class FileExplorer {
     try {
       fileSystem.mv(fileSystem.getResolvedPath(this.context.path, this.selectedItem), fileSystem.getResolvedPath(this.context.path, n));
       this.updateUI();
-    } catch (error) {
-      alert(`Error: ${error.message}`);
+    } catch (e) {
+      new Dialog('File Explorer - Error', 'An error occurred', e.message, 'error', ['Ok'], 'Ok', this.app);
     }
   }
-  deleteSelected() {
-    if (confirm(`Delete ${this.selectedItem}?`)) {
-      fileSystem.rm(this.context.path, this.selectedItem, true);
-      this.updateUI();
+  async deleteSelected() {
+    try {
+      const answer = await new Dialog('File Explorer - Confirm Deletion', `Are you sure you want to permanently delete "${this.selectedItem}"?`,
+        'This file will be permanently removed from the system and cannot be restored.', 'warning', ['Cancel', 'Delete'], 'Cancel', this.app);
+      if (answer === 'Delete') {
+        fileSystem.rm(this.context.path, this.selectedItem, true);
+        this.updateUI();
+      }
+    } catch (e) {
+      new Dialog('File Explorer - Error', 'An error occurred', e.message, 'error', ['Ok'], 'Ok', this.app);
     }
   }
   async copyPath() {
-    let path = this.context.path;
-    if (this.selectedItem) path = fileSystem.getResolvedPath(path, this.selectedItem);
-    await copyText(path);
+    try {
+      let path = this.context.path;
+      if (this.selectedItem) path = fileSystem.getResolvedPath(path, this.selectedItem);
+      await copyText(path);
+    } catch (e) {
+      new Dialog('File Explorer - Error', 'An error occurred', e.message, 'error', ['Ok'], 'Ok', this.app);
+    }
   }
 }
 

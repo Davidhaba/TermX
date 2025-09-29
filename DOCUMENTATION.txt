@@ -1,159 +1,375 @@
-/*
- * ==============================================================================
- * TERM X PROJECT DOCUMENTATION (v2.8.7.1)
- * ==============================================================================
- *
- * This documentation describes the key classes and methods for working with the
- * virtual file system and user interface of the TermX project.
- *
- * ------------------------------------------------------------------------------
- * I. GLOBAL UTILITIES & CONSTANTS
- * ------------------------------------------------------------------------------
- *
- * Globally accessible (defined in the <script> block of index.html):
- *
- * @constant {string} ver
- * The current software version (e.g., 'v2.8.7.1').
- *
- * @constant {string} username
- * The current terminal user's name ('root').
- *
- * @constant {object} icons
- * An object containing all SVG icons available for use within the applications.
- *
- *
- * ------------------------------------------------------------------------------
- * II. CORE CLASSES
- * ------------------------------------------------------------------------------
- *
- *
- * A. CLASS FileSystem
- * ------------------------------------------------------------------------------
- * Manages the entire virtual file system, including saving/loading via
- * localStorage and file/archive operations.
- *
- * 1. SAVING/LOADING:
- *
- * @method saveFileSystem()
- * Saves the current state of this.globalRoot to localStorage (as JSON string).
- * @returns {boolean} True if saving was successful.
- *
- * @method getFileSystem()
- * Loads and parses the JSON string from localStorage back into an object.
- * @returns {object|null} The root directory object or null.
- *
- * 2. FILE HANDLING:
- *
- * @method readFile(path)
- * Retrieves file metadata by its full path.
- * @param {string} path - The full path to the file.
- * @returns {object|null} The file object or null.
- *
- * @method writeFile(path, content, isBinary)
- * Creates or overwrites a file.
- * @param {string} path - The file path, including the name.
- * @param {Uint8Array|string} content - The file content.
- * @param {boolean} isBinary - True if the content is binary (Uint8Array).
- * @returns {boolean} True if successful.
- *
- * @method decodeContent(content, outputFormat)
- * Decodes file content (Blob, ArrayBuffer, URL) into the required format.
- * @param {Blob|Uint8Array|string} content - The initial content.
- * @param {'url'|'text'|'blob'|'arraybuffer'} outputFormat - The target format.
- * @returns {Promise<string|Blob|ArrayBuffer>} The decoded content.
- *
- * 3. ARCHIVES:
- *
- * @async @method unarchive(file, onProgress)
- * Unpacks a supported archive (zip, tar, tar.gz) into the current directory.
- * Uses JSZip, pako, tar.js.
- * @param {object} file - The file object from this.globalRoot.
- * @param {function(processedBytes, totalBytes)} onProgress - Callback for the progress bar.
- * @returns {Promise<Array>} An array of extracted objects: {path, content, isDirectory}.
- *
- *
- * B. CLASS Desktop
- * ------------------------------------------------------------------------------
- * Manages application launching and desktop icons.
- *
- * @property {object} apps
- * A map of registered applications ({id: {name, class, icon, handler}}).
- *
- * @method createDesktopIcon(app)
- * Creates a desktop icon. Uses app.handler to launch the application.
- *
- *
- * C. CLASS Terminal
- * ------------------------------------------------------------------------------
- * Simulates the macOS console, processes commands, and manages state.
- *
- * @property {object} commands
- * A map of user-available commands (ls, cd, unarchive, help...).
- *
- * @method addOutputLine(text, type)
- * Adds a line to the terminal output.
- * @param {string} type - 'info', 'success', 'error'.
- *
- * @async @method unarchive(args)
- * Terminal wrapper for FileSystem.unarchive. Handles command line arguments
- * and displays the progress bar.
- *
- *
- * D. CLASS TextEditor
- * ------------------------------------------------------------------------------
- * The text editor with saving and change checking functionalities.
- *
- * @method openFile(path, content)
- * Loads file content into this.textarea and saves this.originalContent
- * for change detection.
- *
- * @async @method saveFile()
- * Saves the current textarea content to the virtual file system.
- *
- * @method checkChanges()
- * Checks if the current this.textarea.value differs from the
- * initial this.originalContent.
- * @returns {boolean} True if there are unsaved changes.
- *
- * @method newFile()
- * Resets the editor to a new file state.
- *
- *
- * E. CLASS Dialog (Custom Modal)
- * ------------------------------------------------------------------------------
- * An asynchronous custom modal dialog for capturing user choices.
- *
- * @constructor
- * @param {string} title - The window title.
- * @param {string} main_message - The primary question text.
- * @param {string} details - Additional details (under the main text).
- * @param {('error'|'warning'|'question'|'info')} icon - The icon type.
- * @param {Array<string>} buttons - Array of button labels.
- * @param {string} active_button - The label of the button to be highlighted as primary.
- *
- * @async @returns {Promise<string>} Returns the label of the clicked button.
- *
- * USAGE EXAMPLE:
- *
- * new Dialog(
- * 'Unsaved Changes',                      // title
- * 'Save changes before closing the file?', // main_message
- * 'Unsaved data will be lost if you proceed without saving.', // details
- * 'warning',                              // icon
- * ['Cancel', 'Don\'t Save', 'Save'],      // buttons
- * 'Save'                                  // active_button (primary button)
- * ).then(answer => {
- * if (answer === 'Save') {
- * // Saving logic
- * } else if (answer === 'Don\'t Save') {
- * // Logic to disregard changes and close
- * } else {
- * // Logic to cancel the operation
+/**
+ * TERMX - WEB-BASED OPERATING SYSTEM SIMULATION
+ * Version: 3.2 | Author: David | Platform: Web Browser
+ * 
+ * ================================================
+ * 🖥️ COMPREHENSIVE SYSTEM DOCUMENTATION
+ * ================================================
+ * 
+ * 📁 FILE SYSTEM ARCHITECTURE (FileSystem Class)
+ * ================================================
+ * 
+ * Core Structure:
+ * - Root-based virtual file system with '/', '/home', '/bin' directories
+ * - JSON-serialized storage in localStorage under "savefs" key
+ * - Supports both text and binary files with encoding detection
+ * - Automatic file type recognition by extension
+ * 
+ * File Operations:
+ * • createDirectory(name, params) - Creates new directory
+ * • createFile(name, content, params) - Creates new file
+ * • mkdirp(path) - Creates directory path recursively
+ * • mkdir(currentPath, name) - Creates directory in specific path
+ * • touch(currentPath, name) - Creates empty file
+ * • rm(currentPath, name, recursive) - Deletes file/directory
+ * • mv(sourcePath, targetPath) - Moves/renames files/directories
+ * • cp(currentPath, source, target) - Copies files/directories
+ * • writeFile(fullPath, content, isBinary) - Writes content to file
+ * • readFile(fullPath, options) - Reads file content
+ * • asyncReadFile(path) - Async file reading with Promise
+ * 
+ * File Type Detection:
+ * - video: mp4, mov, avi, webm
+ * - audio: mp3, wav, flac, m4a  
+ * - image: png, jpg, jpeg, gif
+ * - text: txt, log, md, html, css, json
+ * - executable: js, app
+ * - archive: zip
+ * - unvalid: all other extensions
+ * 
+ * Special Features:
+ * - Binary file support via Uint8Array/Blob
+ * - URL-based external file references
+ * - ZIP archive extraction with progress tracking
+ * - Automatic application association
+ * - File size formatting (B, KB, MB, GB)
+ * 
+ * 🖼️ DESKTOP ENVIRONMENT (Desktop Class)
+ * ================================================
+ * 
+ * Applications Configuration:
+ * {
+ *   explorer: {name: "File Explorer", class: "explorer", icon: svg, handler: Function}
+ *   terminal: {name: "Terminal", class: "terminal", icon: svg, handler: Function}
+ *   editor: {name: "Text Editor", class: "text", icon: svg, handler: Function}
+ *   imageViewer: {name: "Image Viewer", class: "image", icon: svg, handler: Function}
+ *   videoPlayer: {name: "Video Player", class: "video", icon: svg, handler: Function}
+ *   gitHubLink: {name: "Open Source", icon: svg, handler: Function}
  * }
- * });
- *
- *
- * ==============================================================================
- * END OF DOCUMENTATION
- * ==============================================================================
+ * 
+ * Desktop Icons:
+ * - Automatic creation from apps configuration
+ * - CSS classes for styling (explorer, terminal, text, image, video)
+ * - Click handlers launch corresponding applications
+ * - SVG icon integration from global icons object
+ * 
+ * 🪟 WINDOW MANAGEMENT SYSTEM (Modal Class)
+ * ================================================
+ * 
+ * Window Controls:
+ * • Close (red button) - Closes window with optional callback confirmation
+ * • Minimize (yellow button) - Collapses window to invisible state
+ * • Maximize (green button) - Toggles fullscreen within browser viewport
+ * • Info (i) - Shows application information dialog
+ * 
+ * Drag & Drop Features:
+ * - Mouse and touch event support
+ * - Boundary detection (prevents dragging outside viewport)
+ * - Z-index management (bring to front on click)
+ * - Transition animations for smooth movement
+ * 
+ * Window States:
+ * - Active/Inactive (shadow and z-index differentiation)
+ * - Minimized (hidden but preserved in DOM)
+ * - Maximized (full viewport coverage)
+ * - Blocked (for modal dialogs, prevents interaction)
+ * 
+ * Keyboard Support:
+ * - ESC key closes window
+ * - Focus management for input elements
+ * 
+ * ⌨️ TERMINAL EMULATOR (Terminal Class)
+ * ================================================
+ * 
+ * Command Structure:
+ * command [arguments] [options] && command2 [arguments]
+ * 
+ * Available Commands:
+ * 
+ * FILE SYSTEM COMMANDS:
+ * • ls - List directory contents with file types and sizes
+ * • cd <path> - Change directory (supports .., ., absolute/relative paths)
+ * • pwd - Print current working directory
+ * • mkdir <name> - Create new directory
+ * • touch <name> - Create new file
+ * • rm [-r] <path> - Remove file/directory (-r for recursive directory removal)
+ * • mv <source> <target> - Move/rename files and directories
+ * • cp <source> <target> - Copy files and directories
+ * 
+ * FILE CONTENT COMMANDS:
+ * • cat <file> - Display file contents
+ * • echo [text] > [file] - Display text or write to file
+ * • notepad [file] - Open text editor (optional file parameter)
+ * 
+ * SYSTEM COMMANDS:
+ * • help [command] - Show help information
+ * • about - Show version and author information
+ * • clear - Clear terminal screen
+ * • exit - Close terminal application
+ * • special - Enter math calculation mode
+ * 
+ * NETWORK COMMANDS:
+ * • download <url> [filename] - Download file from URL with progress
+ * • progress [duration] [size] [label] - Simulate download with progress bar
+ * 
+ * ARCHIVE COMMANDS:
+ * • unarchive <filename> - Extract ZIP archive with progress tracking
+ * 
+ * SPECIAL MODE COMMANDS (when in special mode):
+ * • calc <expression> - Evaluate mathematical expressions
+ * • exit - Return to normal mode
+ * 
+ * Terminal Features:
+ * - Command history with arrow key navigation
+ * - Tab completion for commands and file names
+ * - Syntax highlighting and error indicators
+ * - Progress bars for long-running operations
+ * - Virtual keyboard for mobile devices
+ * - Command chaining with && operator
+ * 
+ * 📄 TEXT EDITOR (TextEditor Class)
+ * ================================================
+ * 
+ * File Operations:
+ * - New file creation (Ctrl+N)
+ * - File loading from file system
+ * - Save file (Ctrl+S) 
+ * - Save As functionality
+ * - Auto-detection of unsaved changes
+ * 
+ * Interface Features:
+ * - Line, character, and size counters
+ * - Encoding display (UTF-8, binary)
+ * - Status bar messages (success, error, info)
+ * - File menu with dropdown options
+ * 
+ * Safety Features:
+ * - Exit confirmation for unsaved changes
+ * - Three options: Save, Don't Save, Cancel
+ * - Automatic path creation for new directories
+ * 
+ * 📂 FILE EXPLORER (FileExplorer Class)
+ * ================================================
+ * 
+ * Navigation:
+ * - Breadcrumb path display (click to edit manually)
+ * - Back button for parent directory navigation
+ * - Refresh button to reload current directory
+ * - Double-click folders to enter, files to open
+ * 
+ * Sorting System:
+ * - Name (ascending/descending alphabetical)
+ * - Type (directories first, then files by type)
+ * - Size (file size in bytes, directory item count)
+ * - Visual indicators (↑↓ arrows) for sort order
+ * 
+ * CONTEXT MENU OPERATIONS (Right-click):
+ * 
+ * On Files/Folders:
+ * • Open / Open Folder - Opens with default application
+ * • Open As - Shows application picker for files
+ * • Copy File Path - Copies absolute path to clipboard
+ * • Rename - Renames item (also enables move operations between directories)
+ * • Delete - Permanently deletes with confirmation dialog
+ * 
+ * On Empty Space:
+ * • Refresh - Reloads current directory
+ * • New Folder - Creates new directory with prompt
+ * • New File - Creates new file with prompt
+ * • Copy Current Path - Copies directory path to clipboard
+ * 
+ * RENAME/MOVE FUNCTIONALITY:
+ * - Rename dialog accepts full paths, enabling move operations
+ * - Example: renaming "file.txt" to "../newfolder/file.txt" moves the file
+ * - Uses fileSystem.mv() method which handles both rename and move operations
+ * - Preserves file content and metadata during move
+ * 
+ * File Display:
+ * - Type-specific icons from SVG collection
+ * - File type descriptions (PNG Image, MP3 Audio, etc.)
+ * - Size formatting (B, KB, MB, GB for files, item count for directories)
+ * - Selection highlighting with visual feedback
+ * 
+ * 🎵 MEDIA APPLICATIONS
+ * ================================================
+ * 
+ * IMAGE VIEWER (ImageViewer Class):
+ * - Auto-scaling to fit window
+ * - Loading spinner during file load
+ * - Error handling for corrupt images
+ * - Support for PNG, JPG, JPEG, GIF formats
+ * 
+ * AUDIO PLAYER (AudioPlayer Class):
+ * - Native HTML5 audio controls
+ * - Media Session API integration (system media controls)
+ * - Metadata display (file name in title)
+ * - Support for MP3, WAV, FLAC, M4A formats
+ * 
+ * VIDEO PLAYER (VideoPlayer Class):
+ * - Custom control interface with:
+ *   - Play/pause toggle
+ *   - Progress bar with scrubbing
+ *   - Volume control with mute
+ *   - Time display (current/total)
+ *   - Fullscreen toggle
+ * - Advanced Settings Menu:
+ *   - Video Scale: Fit, Fill, Stretch
+ *   - Playback Speed: 0.5x to 2.0x
+ *   - Zoom Control: 10% to 200% with +/- buttons
+ * - Keyboard Shortcuts:
+ *   - Space: Play/pause
+ *   - Arrow Left/Right: 5-second seek
+ *   - F: Toggle fullscreen
+ * - Auto-hiding controls with mouse movement detection
+ * - Loading states and error handling
+ * 
+ * 💬 DIALOG SYSTEM (Dialog Class)
+ * ================================================
+ * 
+ * Dialog Types:
+ * - info: Blue information dialogs
+ * - warning: Yellow warning dialogs with caution symbol  
+ * - error: Red error dialogs with X symbol
+ * - question: Blue question dialogs with ? symbol
+ * 
+ * Button Configuration:
+ * - Custom button arrays with primary button highlighting
+ * - Automatic Enter key binding for primary action
+ * - ESC key binding for cancel/close
+ * 
+ * Modal Behavior:
+ * - Blocks parent window interaction
+ * - Auto-focuses primary button
+ * - Returns Promise with user selection
+ * 
+ * 🎨 ICON SYSTEM
+ * ================================================
+ * 
+ * Global icons object contains 40+ SVG icons:
+ * - Navigation: arrowUp, arrowDown, arrowLeft, arrowRight, enter
+ * - File Operations: openFile, openFolder, openAs, rename, delete, copy, copyFile
+ * - UI Controls: refresh, settings, fullscreen, minFullscreen
+ * - Media Controls: volumeMute, volumeDown, volumeUp, pause, play
+ * - File Type Icons: folder, audio, image, video, camera, text, terminal, explorer
+ * - Specific File Types: fileUnvalid, fileVideo, fileImage, fileAudio, fileArchive, fileText, fileExecutable
+ * - Application: github
+ * - Dialog Icons: error, warning, question, info
+ * 
+ * 🔧 TECHNICAL IMPLEMENTATION
+ * ================================================
+ * 
+ * Storage Management:
+ * - File system serialization to JSON
+ * - Binary data handling via Uint8Array
+ * - Blob URL creation for media files
+ * - CORS proxy for external downloads
+ * 
+ * Security Features:
+ * - JavaScript execution confirmation for .js files
+ * - Input validation and sanitization
+ * - Path traversal protection
+ * - Safe math evaluation in terminal special mode
+ * 
+ * Mobile Support:
+ * - Touch event handlers for all interactions
+ * - Virtual keyboard for terminal input
+ * - Responsive design adaptations
+ * - Touch-friendly button sizes
+ * 
+ * Performance Optimizations:
+ * - Debounced event handlers
+ * - Efficient file system traversal algorithms
+ * - Lazy loading of media content
+ * - CSS transitions for smooth animations
+ * 
+ * Error Handling:
+ * - Comprehensive try-catch blocks
+ * - User-friendly error messages
+ * - Fallback operations for failed actions
+ * - Graceful degradation for unsupported features
+ * 
+ * 🚀 USAGE EXAMPLES
+ * ================================================
+ * 
+ * File System Operations:
+ * // In terminal
+ * mkdir documents
+ * cd documents
+ * touch report.txt
+ * echo "Hello World" > report.txt
+ * cat report.txt
+ * mv report.txt ../archive.txt
+ * 
+ * Media Playback:
+ * // Open media files
+ * open /bin/lion_video.mp4
+ * open /bin/lion_photo.png
+ * open /bin/kamin.mp3
+ * 
+ * Advanced Operations:
+ * // Download and extract archive
+ * download https://example.com/files.zip
+ * unarchive files.zip
+ * 
+ * // Math calculations
+ * special
+ * 2+2*5
+ * exit
+ * 
+ * 📱 BROWSER COMPATIBILITY
+ * ================================================
+ * 
+ * Required APIs:
+ * - ES6+ Features: Classes, Promises, Arrow Functions
+ * - Web Storage API (localStorage)
+ * - File API (Blob, URL.createObjectURL)
+ * - Fullscreen API
+ * - Touch Events (optional, for mobile)
+ * - Clipboard API (optional, with fallback)
+ * 
+ * Supported Browsers:
+ * - Chrome 60+
+ * - Firefox 55+
+ * - Safari 11+
+ * - Edge 79+
+ * 
+ * Mobile Browsers:
+ * - iOS Safari 11+
+ * - Chrome Mobile 60+
+ * - Samsung Internet 8.2+
+ * 
+ * ================================================
+ * 🎯 KEY IMPLEMENTATION NOTES
+ * ================================================
+ * 
+ * 1. File Explorer's rename functionality doubles as move operation
+ *    when providing full paths in the rename dialog
+ * 
+ * 2. Terminal supports command chaining with && operator for
+ *    sequential command execution
+ * 
+ * 3. All media players use Blob URLs for file access to avoid
+ *    browser security restrictions
+ * 
+ * 4. The file system maintains separate encoding flags for
+ *    text vs binary file handling
+ * 
+ * 5. Mobile support includes virtual keyboard and touch-optimized
+ *    interface elements throughout all applications
+ * 
+ * 6. Progress tracking is implemented for downloads, archive
+ *    extraction, and simulated operations
+ * 
+ * 7. Comprehensive error handling with user-friendly messages
+ *    and recovery options
  */

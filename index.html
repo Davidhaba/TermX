@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="uk">
+<html lang="en">
 
 <head>
   <meta charset="UTF-8">
@@ -14,7 +14,7 @@
   <script src="main.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
   <script>
-    const ver = 'v3.1',
+    const ver = 'v3.2',
       username = 'root',
       icons = {
         arrowUp: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M7 11.0001L12 6.00006L17 11.0001M12 18.0001V6.00006" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
@@ -157,8 +157,8 @@
               } else {
                 resolve(file.content);
               }
-            } catch (error) {
-              reject(error);
+            } catch (e) {
+              reject(e);
             }
           }, 0);
         });
@@ -365,7 +365,10 @@
         const targetParentPath = targetFullPath.split('/').slice(0, -1).join('/');
         const targetParent = this._resolvePath(targetParentPath);
         const targetName = targetFullPath.split('/').pop() || source.name;
-        if (source.parameters.isSystem === true) throw new Error("Can't move system file or directory");
+        if (source.parameters.isSystem === true) {
+          if (source.type === 'file') throw new Error("Can't move system file");
+          else throw new Error("Can't move system directory");
+        }
         if (!targetParent || targetParent.type !== 'directory') {
           throw new Error(`Invalid target path '${targetFullPath}'`);
         }
@@ -1697,10 +1700,28 @@ Proceed with execution only if you are ABSOLUTELY sure this file is safe?`;
         });
         this.textarea.addEventListener('keyup', () => this.updateInfoBar());
         this.app.setupExitBtn(async () => {
-          if (await this.checkChanges() && confirm('Save changes before exit?')) {
-            await this.saveFile();
+          if (await this.checkChanges()) {
+            const isSave = await this.confirmSave();
+            if (isSave === null) return false;
           }
         });
+      }
+      async confirmSave() {
+        const answer = await new Dialog(
+          'Unsaved Changes',
+          'Do you want to save the changes you made to this document?',
+          'Your changes will be lost if you don\'t save them.',
+          'question',
+          ['Cancel', 'No', 'Yes'],
+          'Yes',
+          this.app
+        );
+        if (answer === 'Yes') {
+          await this.saveFile();
+          return true;
+        } else if (answer === 'Cancel') {
+          return null;
+        }
       }
       async loadFileContent() {
         try {
@@ -1747,8 +1768,9 @@ Proceed with execution only if you are ABSOLUTELY sure this file is safe?`;
         }
       }
       async newFile() {
-        if (await this.checkChanges() && !confirm('Discard current changes?')) {
-          return;
+        if (await this.checkChanges()) {
+          const isSave = await this.confirmSave();
+          if (isSave === null) return;
         }
         this.path = '';
         this.textarea.value = '';
@@ -1775,7 +1797,6 @@ Proceed with execution only if you are ABSOLUTELY sure this file is safe?`;
         }
       }
     }
-    
   </script>
 </body>
 

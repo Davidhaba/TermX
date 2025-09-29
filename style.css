@@ -130,6 +130,12 @@ body {
   flex-direction: column;
 }
 
+.modal-window.dialog.active {
+  opacity: 1;
+  pointer-events: all;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.4);
+}
+
 .app-size {
   width: 80vw;
   height: 60vh;
@@ -1372,29 +1378,34 @@ body {
   background-color: transparent;
   text-align: center;
 }
+
 .icon-section {
   margin-bottom: 15px;
   flex-shrink: 0;
   width: 48px;
   height: 48px;
 }
+
 .message-section h2,
 .message-section p {
   font-family: inherit;
   color: #ccc;
 }
+
 .message-section h2 {
   font-size: 14px;
   font-weight: 600;
   color: #fff;
   margin: 0 0 5px 0;
 }
+
 .message-section p {
   font-size: 12px;
   color: #bbb;
   margin: 0;
   line-height: 1.5;
 }
+
 .dialog .button-bar {
   padding: 15px 20px;
   text-align: center;
@@ -1404,6 +1415,7 @@ body {
   justify-content: flex-end;
   gap: 10px;
 }
+
 .mac-btn {
   font-family: inherit;
   font-size: 12px;
@@ -1419,24 +1431,29 @@ body {
   background-color: rgba(255, 255, 255, 0.1);
   box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
 }
+
 .mac-btn:hover {
   background-color: rgba(255, 255, 255, 0.2);
   border-color: rgba(255, 255, 255, 0.3);
 }
+
 .mac-btn:active {
   background-color: rgba(0, 0, 0, 0.3);
   border-color: rgba(255, 255, 255, 0.1);
 }
+
 .mac-btn.primary {
   color: #fff;
   border-color: #007aff;
   background-color: #007aff;
   box-shadow: 0 1px 1px rgba(0, 0, 0, 0.25);
 }
+
 .mac-btn.primary:hover {
   background-color: #2c8eff;
   border-color: #2c8eff;
 }
+
 .mac-btn.primary:active {
   background-color: #006dd9;
   border-color: #006dd9;
