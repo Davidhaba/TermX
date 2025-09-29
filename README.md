@@ -1,62 +1,69 @@
 ## TermX: A Web-Based macOS Terminal and File System Simulator
 
-TermX is an interactive, web-based simulator that emulates the look and feel of a macOS terminal and file explorer. It's a fun and practical project designed to showcase a modern, dynamic web application that operates a virtual file system directly in your browser. This project is perfect for anyone interested in exploring command-line interfaces, file management, or just wants to play around with a virtual environment without touching their actual computer.
+TermX is an interactive, web-based simulator that emulates the look and feel of a macOS terminal and file explorer. It's a fun and practical project designed to showcase a modern, dynamic web application that operates a virtual file system directly in your browser.
+
+**🚀 Live Demo: [TermX (MacOS)](https://davidhaba.github.io/TermX/)**
 
 ---
 
-### Features
+### ✨ Key Features
 
-TermX provides a robust set of features that mimic a real operating system environment, all within your web browser.
+#### 🖥️ Interactive Terminal
+- **Unix-like Commands**: `ls`, `cd`, `mkdir`, `touch`, `cat`, `echo`, `rm`, `mv`, `cp`, `clear`
+- **File Operations**: Create, delete, move, copy files and directories
+- **Network Tools**: Download files from URLs with progress tracking
+- **Special Modes**: Math calculation mode and command chaining with `&&`
+- **Auto-completion**: Tab completion for commands and file names
 
-#### Interactive Terminal
+#### 📁 File Explorer
+- **Visual Navigation**: Double-click folders, breadcrumb navigation
+- **Context Menu**: Right-click for open, rename, delete, copy path operations
+- **Smart Sorting**: Sort by name, type, or size with visual indicators
+- **Move/Rename**: Rename dialog supports moving files between directories
 
-The core of TermX is its fully functional terminal. You can run classic Unix-like commands to navigate the file system and manage files:
+#### 🛠️ Built-in Applications
+- **Text Editor**: Full-featured editor with save/load capabilities (`Ctrl+S`, `Ctrl+N`)
+- **Media Players**: Image viewer, video player, and audio player
+- **File Type Support**: Automatic detection and appropriate application launching
 
-* **`ls`**: List all files and directories in the current path.
-* **`cd`**: Change the current directory to navigate through folders.
-* **`mkdir`**: Create new directories.
-* **`touch`**: Create new, empty files.
-* **`cat`**: Display the content of a text file.
-* **`echo`**: Print text to the terminal.
-* **`rm`**: Delete files and folders.
-* **`mv`**: Move or rename files and folders.
-* **`clear`**: Clear the terminal screen.
-* **`download`**: Download files from a specified URL directly into the virtual file system.
-
-The terminal also includes an `info` command to give you a quick overview of each command's functionality.
-
-#### File Explorer
-
-In addition to the terminal, TermX features a graphical file explorer that makes navigation intuitive and simple. The explorer allows you to:
-
-* **View Files**: See all files and folders in a visual, user-friendly interface.
-* **Navigate**: Double-click on folders to enter them and use the back button to navigate to the parent directory.
-* **Manage Files**: Right-click on items to access a context menu with options to **rename**, **delete**, **open**, and **view file properties**.
-* **Sorting**: Sort files by **name**, **type**, or **size** with a single click.
-
-#### Integrated Applications
-
-TermX comes with several built-in applications that work seamlessly with the virtual file system:
-
-* **Text Editor**: A full-featured text editor for creating, editing, and saving text files. It supports keyboard shortcuts like `Ctrl+S` to save and `Ctrl+N` for a new file.
-* **Image Viewer**: A simple image viewer that automatically opens and displays supported image files.
-* **Video Player**: A basic video player for viewing videos stored in the file system.
+#### 🎨 User Experience
+- **macOS-inspired UI**: Familiar window management with minimize/maximize/close
+- **Drag & Drop**: Move windows by dragging title bars
+- **Mobile Support**: Touch-optimized interface with virtual keyboard
+- **Persistent Storage**: File system saved in browser localStorage
 
 ---
 
-### How to Use
+### 🚀 Quick Start
 
-To start using TermX, simply visit the live page. All the tools and applications are ready to use directly in your browser without any installation required.
+1. **Visit the live demo** above
+2. **Click desktop icons** to launch applications
+3. **Use the terminal** for command-line operations:
+   ```bash
+   mkdir documents
+   cd documents
+   touch hello.txt
+   echo "Welcome to TermX" > hello.txt
+   cat hello.txt
+```
 
-**🚀 Explore TermX Live: [TermX (MacOS)](https://davidhaba.github.io/TermX/)**
+1. Right-click in File Explorer for context menu options
+2. Double-click files to open with appropriate applications
 
 ---
 
-### Credits
+🛠️ Technical Highlights
 
-This project was developed by David as a demonstration of front-end development skills, including:
+· Pure JavaScript implementation
+· Virtual File System with persistent storage
+· SVG Icon System with 40+ custom icons
+· Responsive Design for desktop and mobile
+· No backend required - runs entirely in browser
 
-* **JavaScript**: For all the logic, dynamic content, and virtual file system management.
-* **HTML & CSS**: For creating the user interface and styling the macOS-like environment.
+---
 
-We hope you enjoy using TermX! If you have any suggestions for new features, please open an issue in this repository.
+👨‍💻 Credits
+
+Developed by David as a demonstration of modern front-end development capabilities.
+
+For detailed technical documentation, see DOCUMENTATION.txt
