@@ -10,11 +10,10 @@
 </head>
 
 <body>
-  <div class="desktop" id="desktop"></div>
   <script src="main.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
   <script>
-    const ver = 'v3.2',
+    const ver = 'v3.3',
       username = 'root',
       icons = {
         arrowUp: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M7 11.0001L12 6.00006L17 11.0001M12 18.0001V6.00006" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
@@ -719,6 +718,73 @@ Proceed with execution only if you are ABSOLUTELY sure this file is safe?`;
           copy.children = node.children.map(child => this._deepCopy(child));
         }
         return copy;
+      }
+    }
+    class Desktop {
+      constructor() {
+        this.desktop = document.createElement('div');
+        this.desktop.className = "desktop";
+        document.body.appendChild(this.desktop);
+        const path = '/bin/';
+        this.apps = {
+          explorer: {
+            name: "File Explorer",
+            class: "explorer",
+            icon: icons.explorer,
+            handler: () => new FileExplorer()
+          },
+          terminal: {
+            name: "Terminal",
+            class: "terminal",
+            icon: icons.terminal,
+            handler: () => new Terminal()
+          },
+          editor: {
+            name: "Text Editor",
+            class: "text",
+            icon: icons.text,
+            handler: () => new TextEditor()
+          },
+          imageViewer: {
+            name: "Image Viewer",
+            class: "image",
+            icon: icons.image,
+            handler: () => fileSystem.openFile(path + 'lion_photo.png', 'image')
+          },
+          videoPlayer: {
+            name: "Video Player",
+            class: "video",
+            icon: icons.video,
+            handler: () => fileSystem.openFile(path + 'lion_video.mp4', 'video')
+          },
+          gitHubLink: {
+            name: "Open Source",
+            icon: icons.github,
+            handler: () => {
+              if (confirm("You will be redirected to the open-source code page on GitHub. \nPlease confirm the action."))
+                window.open('https://github.com/Davidhaba/TermX', '_blank');
+            }
+          }
+        };
+        Object.entries(this.apps).forEach(([id, app]) => {
+          this.createDesktopIcon(app);
+        });
+      }
+      
+      createDesktopIcon(app) {
+        const icon = document.createElement("div");
+        icon.className = "desktop-icon";
+        if (app.class) icon.classList.add(app.class);
+        const image = document.createElement("div");
+        image.className = "image";
+        if (app.icon) image.innerHTML = app.icon;
+        icon.appendChild(image);
+        const label = document.createElement("div");
+        label.className = "label";
+        if (app.name) label.innerHTML = app.name;
+        icon.appendChild(label);
+        if (app.handler && typeof app.handler === "function") icon.addEventListener("click", () => app.handler.call(this));
+        this.desktop?.appendChild(icon);
       }
     }
     class Terminal {
@@ -1601,199 +1667,6 @@ Proceed with execution only if you are ABSOLUTELY sure this file is safe?`;
           this.updateProgressBar(progressBar, 100, extractedFiles.length, extractedFiles.length, fileName);
         } catch (error) {
           this.addOutputLine(error.message, 'error');
-        }
-      }
-    }
-    class TextEditor {
-      constructor(path = null) {
-        this.path = path;
-        this.name = path?.split('/').pop();
-        this.app = new Modal(`${name || 'New File'} - Text Editor`);
-        this.app.setApp();
-        this.app.setupInfoBtn('Text Editor',
-          'The Text Editor is a simple tool for creating and editing text files. You can type and edit content and save your work directly to the file system. It supports keyboard shortcuts like **Ctrl+S** to save and **Ctrl+N** to create a new file. It also provides a warning before you exit with unsaved changes.'
-        );
-        this.textarea = document.createElement('textarea');
-        this.textarea.className = 'text-editor';
-        this.textarea.spellcheck = false;
-        const toolbar = this.createToolbar();
-        const infoBar = this.createInfoBar();
-        this.app.appMain.appendChild(toolbar);
-        this.app.appMain.appendChild(this.textarea);
-        this.app.appMain.appendChild(infoBar);
-        this.setupEventListeners();
-        if (path) {
-          this.loadFileContent();
-        }
-      }
-      createToolbar() {
-        const toolbar = document.createElement('div');
-        toolbar.className = 'editor-toolbar';
-        const fileMenu = document.createElement('div');
-        fileMenu.className = 'file-menu';
-        const fileBtn = document.createElement('button');
-        fileBtn.innerHTML = icons.fileText + ' File';
-        const dropdown = document.createElement('div');
-        dropdown.className = 'dropdown-content';
-        const newBtn = document.createElement('button');
-        newBtn.innerHTML = 'New File <span class="btnKeyInfo">Ctrl+N</span>';
-        newBtn.onclick = async () => {
-          await this.newFile();
-        }
-        const saveBtn = document.createElement('button');
-        saveBtn.innerHTML = 'Save <span class="btnKeyInfo">Ctrl+S</span>';
-        saveBtn.onclick = () => this.saveFile();
-        const saveAsBtn = document.createElement('button');
-        saveAsBtn.innerHTML = 'Save As...';
-        saveAsBtn.onclick = () => this.saveFile(true);
-        dropdown.appendChild(newBtn);
-        dropdown.appendChild(saveBtn);
-        dropdown.appendChild(saveAsBtn);
-        fileMenu.appendChild(fileBtn);
-        fileMenu.appendChild(dropdown);
-        toolbar.appendChild(fileMenu);
-        fileBtn.onclick = (e) => {
-          e.stopPropagation();
-          dropdown.classList.toggle('show');
-        };
-        document.addEventListener('click', (e) => {
-          dropdown.classList.remove('show');
-        });
-        return toolbar;
-      }
-      createInfoBar() {
-        const infoBar = document.createElement('div');
-        infoBar.className = 'editor-info-bar';
-        infoBar.innerHTML = `
-          <div class="info-item" data-info="lines">Lines: 0</div>
-          <div class="info-item" data-info="chars">Chars: 0</div>
-          <div class="info-item" data-info="size">Size: 0 B</div>
-          <div class="info-item" data-info="encoding">UTF-8</div>
-        `;
-        return infoBar;
-      }
-      updateInfoBar() {
-        const lines = this.textarea.value.split('\n').length;
-        const chars = this.textarea.value.length;
-        const size = new TextEncoder().encode(this.textarea.value).length;
-        this.app.appMain.querySelector('[data-info="lines"]').textContent = `Lines: ${lines}`;
-        this.app.appMain.querySelector('[data-info="chars"]').textContent = `Chars: ${chars}`;
-        this.app.appMain.querySelector('[data-info="size"]').textContent = `Size: ${fileSystem.formatSize(size)}`;
-        const file = fileSystem._resolvePath(this.path);
-        this.app.appMain.querySelector('[data-info="encoding"]').textContent = (file?.type === "file" && file.parameters) ? file.parameters.encoding :
-          "UTF-8";
-      }
-      setupEventListeners() {
-        this.textarea.addEventListener('keydown', (e) => {
-          if (e.ctrlKey) {
-            switch (e.key.toLowerCase()) {
-              case 's':
-                e.preventDefault();
-                this.saveFile();
-                break;
-              case 'n':
-                e.preventDefault();
-                this.newFile();
-                break;
-            }
-          }
-        });
-        this.textarea.addEventListener('keyup', () => this.updateInfoBar());
-        this.app.setupExitBtn(async () => {
-          if (await this.checkChanges()) {
-            const isSave = await this.confirmSave();
-            if (isSave === null) return false;
-          }
-        });
-      }
-      async confirmSave() {
-        const answer = await new Dialog(
-          'Unsaved Changes',
-          'Do you want to save the changes you made to this document?',
-          'Your changes will be lost if you don\'t save them.',
-          'question',
-          ['Cancel', 'No', 'Yes'],
-          'Yes',
-          this.app
-        );
-        if (answer === 'Yes') {
-          await this.saveFile();
-          return true;
-        } else if (answer === 'Cancel') {
-          return null;
-        }
-      }
-      async loadFileContent() {
-        try {
-          this.textarea.value = await this.getFileContent();
-          this.app.updateTitle(`${this.name} - Text Editor`);
-          this.updateInfoBar();
-        } catch (error) {
-          ththis.showStatus(`Error loading file: ${error.message}`, 'error');
-        }
-      }
-      async getFileContent() {
-        return await fileSystem.decodeContent(await fileSystem.asyncReadFile(this.path), "text");
-      }
-      async checkChanges() {
-        const text = this.textarea.value || "";
-        if (!this.path) {
-          if (text) return true;
-        } else {
-          const cont = await this.getFileContent() || "";
-          if (cont !== text) {
-            return true;
-          }
-        }
-        return false;
-      }
-      async saveFile(isSaveAs = false) {
-        try {
-          const newPath = (isSaveAs || !this.path) ?
-            prompt('Enter file path:', '/home/untitled.txt') :
-            this.path;
-          if (!newPath) return;
-          const dirPath = newPath.split('/').slice(0, -1).join('/');
-          fileSystem.mkdirp(dirPath);
-          const success = fileSystem.writeFile(newPath, this.textarea.value);
-          if (success) {
-            this.path = newPath;
-            this.app.updateTitle(`${this.path} - Text Editor`);
-            this.showStatus('File saved successfully!', 'success');
-          } else {
-            throw new Error('Failed to save file');
-          }
-        } catch (error) {
-          this.showStatus(`Error: ${error.message}`, 'error');
-        }
-      }
-      async newFile() {
-        if (await this.checkChanges()) {
-          const isSave = await this.confirmSave();
-          if (isSave === null) return;
-        }
-        this.path = '';
-        this.textarea.value = '';
-        this.app.updateTitle('New File - Text Editor');
-        this.updateInfoBar();
-      }
-      showStatus(message, type = 'info') {
-        let statusBar = this.app.appMain.querySelector('.status-bar');
-        if (statusBar) {
-          removeStatus(statusBar);
-        }
-        statusBar = document.createElement('div');
-        this.app.appMain.appendChild(statusBar);
-        statusBar.textContent = message;
-        statusBar.className = `status-bar ${type}`;
-        setTimeout(() => statusBar.classList.add('show'), 0);
-        setTimeout(() => {
-          removeStatus(statusBar);
-        }, 3000);
-        
-        function removeStatus(status) {
-          status?.classList?.remove('show');
-          setTimeout(() => status?.remove(), 500);
         }
       }
     }
