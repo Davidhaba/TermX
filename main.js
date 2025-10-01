@@ -618,7 +618,6 @@ class FileExplorer {
         this.currentPath.focus();
       }
     });
-    this.currentPath.addEventListener("blur", () => this.updatePath());
     this.currentPath.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         try {
@@ -648,8 +647,13 @@ class FileExplorer {
   }
   updatePath() {
     this.currentPath.readOnly = true;
+    const enteredPath = this.currentPath.value;
     try {
-      this.context.path = fileSystem.cd(this.context.path, this.currentPath.value);
+      const item = fileSystem._resolvePath(enteredPath);
+      if (item && item.type) {
+        if (item.type === 'file') fileSystem.openFile(enteredPath);
+        else this.context.path = fileSystem.cd(this.context.path, enteredPath);
+      }
     } catch (e) {}
     this.updateUI();
   }
@@ -847,14 +851,37 @@ class FileExplorer {
   }
   async deleteSelected() {
     try {
-      const answer = await new Dialog('File Explorer - Confirm Deletion', `Are you sure you want to permanently delete "${this.selectedItem}"?`,
-        'This file will be permanently removed from the system and cannot be restored.', 'warning', ['Cancel', 'Delete'], 'Cancel', this.app);
+      const itemPath = this.context.path.endsWith('/') ?
+        this.context.path + this.selectedItem :
+        this.context.path + '/' + this.selectedItem;
+      const item = fileSystem._resolvePath(itemPath);
+      if (!item) {
+        new Dialog('File Explorer - Error',
+          'Item not found.',
+          `The item "${this.selectedItem}" does not exist at the current path.`,
+          'error', ['Ok'], 'Ok', this.app);
+        this.updateUI();
+        return;
+      }
+      if (item.parameters.isSystem === true) {
+        new Dialog('File Explorer - Access Denied',
+          'Cannot delete system item.',
+          `The item "${this.selectedItem}" is a protected system file or directory and cannot be modified.`,
+          'warning', ['Ok'], 'Ok', this.app);
+        return;
+      }
+      const answer = await new Dialog(
+        'File Explorer - Confirm Deletion',
+        `Are you sure you want to permanently delete "${this.selectedItem}"?`,
+        'This file will be permanently removed from the system and cannot be restored.',
+        'warning', ['Cancel', 'Delete'], 'Cancel', this.app
+      );
       if (answer === 'Delete') {
         fileSystem.rm(this.context.path, this.selectedItem, true);
         this.updateUI();
       }
     } catch (e) {
-      new Dialog('File Explorer - Error', 'An error occurred', e.message, 'error', ['Ok'], 'Ok', this.app);
+      new Dialog('File Explorer - Error', 'An unexpected error occurred.', e.message, 'error', ['Ok'], 'Ok', this.app);
     }
   }
   async copyPath() {

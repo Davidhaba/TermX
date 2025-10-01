@@ -13,7 +13,7 @@
   <script src="main.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
   <script>
-    const ver = 'v3.3',
+    const ver = 'v3.3.1.1',
       username = 'root',
       icons = {
         arrowUp: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M7 11.0001L12 6.00006L17 11.0001M12 18.0001V6.00006" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
@@ -117,9 +117,9 @@
           const binDir = this.createDirectory('bin', { isSystem: true });
           this.globalRoot.children.push(binDir);
           binDir.children.push(...[
-            this.createFile('lion_photo.png',
+            this.createFile('tiger_photo.png',
               'https://dl.dropbox.com/scl/fi/5mgu2ty49y9xhvvm10b7k/1757933368173.jpg?rlkey=pfj4dtp5dfqkcvud6cs57ertk&st=qq0koisz'),
-            this.createFile('lion_video.mp4', 'https://dl.dropbox.com/scl/fi/5r13hlefcadlrm7qu43na/lion.mp4?rlkey=2tuwue1qtf3xjoy8kwdf1qzwj'),
+            this.createFile('tiger_video.mp4', 'https://dl.dropbox.com/scl/fi/5r13hlefcadlrm7qu43na/lion.mp4?rlkey=2tuwue1qtf3xjoy8kwdf1qzwj'),
             this.createFile('Kamin - ZetaMix (Sloved Reverb).mp3',
               'https://dl.dropbox.com/scl/fi/a1rrytd8dggp07mug6kue/kamin.mp3?rlkey=b0bxdstk8eje3jj4z4uua54e5&st=gse4q6vp')
           ]);

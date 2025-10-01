@@ -34,6 +34,7 @@ body {
   gap: 20px;
   pointer-events: none;
   align-content: start;
+  background-color: #1F1F1F;
 }
 
 .desktop-icon {
