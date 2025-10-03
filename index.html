@@ -13,7 +13,7 @@
   <script src="main.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
   <script>
-    const ver = 'v3.3.1.1',
+    const ver = 'v3.3.2',
       username = 'root',
       icons = {
         arrowUp: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M7 11.0001L12 6.00006L17 11.0001M12 18.0001V6.00006" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
@@ -113,19 +113,60 @@
           this.globalRoot = savefs;
         } else {
           this.globalRoot = this.createDirectory('root', { isSystem: true });
-          this.globalRoot.children.push(this.createDirectory('home'));
-          const binDir = this.createDirectory('bin', { isSystem: true });
-          this.globalRoot.children.push(binDir);
-          binDir.children.push(...[
-            this.createFile('tiger_photo.png',
-              'https://dl.dropbox.com/scl/fi/5mgu2ty49y9xhvvm10b7k/1757933368173.jpg?rlkey=pfj4dtp5dfqkcvud6cs57ertk&st=qq0koisz'),
-            this.createFile('tiger_video.mp4', 'https://dl.dropbox.com/scl/fi/5r13hlefcadlrm7qu43na/lion.mp4?rlkey=2tuwue1qtf3xjoy8kwdf1qzwj'),
-            this.createFile('Kamin - ZetaMix (Sloved Reverb).mp3',
-              'https://dl.dropbox.com/scl/fi/a1rrytd8dggp07mug6kue/kamin.mp3?rlkey=b0bxdstk8eje3jj4z4uua54e5&st=gse4q6vp')
-          ]);
         }
+        this.ensureRequiredFiles();
         if (!this.exists(this.globalRoot.children, 'bin')) {
           throw new Error('Failed to initialize file system');
+        }
+      }
+      ensureRequiredFiles() {
+        const requiredDirs = [
+          { name: 'home', path: '/' },
+          { name: 'bin', path: '/' }
+        ];
+        const requiredFiles = [
+        {
+          name: 'tiger_photo.png',
+          content: 'https://dl.dropbox.com/scl/fi/5mgu2ty49y9xhvvm10b7k/1757933368173.jpg?rlkey=pfj4dtp5dfqkcvud6cs57ertk&st=qq0koisz',
+          path: '/bin'
+        },
+        {
+          name: 'tiger_video.mp4',
+          content: 'https://dl.dropbox.com/scl/fi/5r13hlefcadlrm7qu43na/lion.mp4?rlkey=2tuwue1qtf3xjoy8kwdf1qzwj',
+          path: '/bin'
+        },
+        {
+          name: 'Kamin - ZetaMix (Sloved Reverb).mp3',
+          content: 'https://dl.dropbox.com/scl/fi/a1rrytd8dggp07mug6kue/kamin.mp3?rlkey=b0bxdstk8eje3jj4z4uua54e5&st=gse4q6vp',
+          path: '/bin'
+        }];
+        let needsSave = false;
+        requiredDirs.forEach(dirConfig => {
+          const fullPath = dirConfig.path === '/' ? `/${dirConfig.name}` : `${dirConfig.path}/${dirConfig.name}`;
+          const dir = this._resolvePath(fullPath);
+          if (!dir) {
+            const parentDir = this._resolvePath(dirConfig.path);
+            if (parentDir && parentDir.type === 'directory') {
+              const newDir = this.createDirectory(dirConfig.name, { isSystem: dirConfig.name === 'bin' });
+              parentDir.children.push(newDir);
+              needsSave = true;
+            }
+          }
+        });
+        requiredFiles.forEach(fileConfig => {
+          const fullPath = `${fileConfig.path}/${fileConfig.name}`;
+          const file = this._resolvePath(fullPath);
+          if (!file) {
+            const targetDir = this._resolvePath(fileConfig.path);
+            if (targetDir && targetDir.type === 'directory') {
+              const newFile = this.createFile(fileConfig.name, fileConfig.content);
+              targetDir.children.push(newFile);
+              needsSave = true;
+            }
+          }
+        });
+        if (needsSave) {
+          this.saveFileSystem();
         }
       }
       saveFileSystem() {
@@ -749,13 +790,13 @@ Proceed with execution only if you are ABSOLUTELY sure this file is safe?`;
             name: "Image Viewer",
             class: "image",
             icon: icons.image,
-            handler: () => fileSystem.openFile(path + 'lion_photo.png', 'image')
+            handler: () => fileSystem.openFile(path + 'tiger_photo.png', 'image')
           },
           videoPlayer: {
             name: "Video Player",
             class: "video",
             icon: icons.video,
-            handler: () => fileSystem.openFile(path + 'lion_video.mp4', 'video')
+            handler: () => fileSystem.openFile(path + 'tiger_video.mp4', 'video')
           },
           gitHubLink: {
             name: "Open Source",
