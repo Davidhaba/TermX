@@ -149,7 +149,7 @@ class Modal {
       this.modWindow.style.transition = "all 0.3s";
     }
     this.transitionTimer = setTimeout(() => {
-      this.modWindow.style.transition = "";
+      if (this.modWindow) this.modWindow.style.transition = "";
       this.transitionTimer = null;
     }, 300);
   }
