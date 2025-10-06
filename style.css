@@ -29,8 +29,8 @@ body {
   padding: 20px;
   display: grid;
   grid-auto-flow: column;
-  grid-template-rows: repeat(auto-fill, 80px);
-  grid-auto-columns: minmax(80px, auto);
+  grid-template-rows: repeat(auto-fit, 80px);
+  grid-auto-columns: minmax(80px, 80px);
   gap: 20px;
   pointer-events: none;
   align-content: start;

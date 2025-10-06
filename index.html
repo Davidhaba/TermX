@@ -13,7 +13,7 @@
   <script src="main.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
   <script>
-    const ver = 'v3.3.2.1',
+    const ver = 'v3.3.3',
       username = 'root',
       icons = {
         arrowUp: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M7 11.0001L12 6.00006L17 11.0001M12 18.0001V6.00006" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
@@ -753,10 +753,12 @@ Proceed with execution only if you are ABSOLUTELY sure this file is safe?`;
         const copy = {
           name: node.name,
           type: node.type,
-          content: node.content
+          parameters: node.parameters
         };
         if (node.type === 'directory') {
           copy.children = node.children.map(child => this._deepCopy(child));
+        } else if (node.type === 'file') {
+          copy.content = node.content;
         }
         return copy;
       }
@@ -1187,11 +1189,7 @@ Proceed with execution only if you are ABSOLUTELY sure this file is safe?`;
           case 'Enter':
             e.preventDefault();
             this.executeCommand(this.input.textContent.trim());
-            if (this.currentHint) {
-              this.currentHint.remove();
-              this.currentHint = null;
-              this.updateHint();
-            }
+            this.updateHint();
             break;
           case 'ArrowUp':
             e.preventDefault();
@@ -1250,6 +1248,7 @@ Proceed with execution only if you are ABSOLUTELY sure this file is safe?`;
         } else {
           this.input.textContent = '';
         }
+        this.updateHint();
         this.placeCaretAtEnd(this.input);
       }
       
@@ -1543,24 +1542,25 @@ Proceed with execution only if you are ABSOLUTELY sure this file is safe?`;
         if (!units[unit]) throw new Error('Unknown unit');
         return value * units[unit];
       }
-      updateHint() {
+      removeHint() {
         try {
           if (this.currentHint) {
             this.currentHint.remove();
             this.currentHint = null;
           }
-          const text = this.input.textContent;
-          const hints = this.getHints(text);
-          if (!hints || !hints.length || hints[0] === '') return;
+        } catch {}
+      }
+      updateHint() {
+        try {
+          this.removeHint();
+          const hint = this.getHints(this.input.textContent)[0];
+          if (!hint || hint === '') return;
           this.currentHint = document.createElement('span');
           this.currentHint.className = 'stdin-hint';
-          this.currentHint.textContent = hints[0];
+          this.currentHint.textContent = hint;
           this.input.parentNode.appendChild(this.currentHint);
-        } catch (error) {
-          if (this.currentHint) {
-            this.currentHint.remove();
-            this.currentHint = null;
-          }
+        } catch {
+          this.removeHint();
         }
       }
       getHints(text) {
@@ -1582,33 +1582,27 @@ Proceed with execution only if you are ABSOLUTELY sure this file is safe?`;
       getCommandHints(command, args, currentWord) {
         switch (command) {
           case 'help':
-            return Object.keys(this.isSpecialMode ? this.specialCommands : this.commands)
-              .filter(cmd => cmd.startsWith(currentWord))
-              .map(cmd => cmd.slice(currentWord.length));
+            if (args.length <= 1)
+              return Object.keys(this.isSpecialMode ? this.specialCommands : this.commands).filter(cmd => cmd.startsWith(currentWord)).map(cmd => cmd.slice(currentWord.length));
           case 'cd':
-            return fileSystem.ls(this.context)
-              .filter(f => f.type === 'directory' && f.name.startsWith(currentWord))
-              .map(f => f.name.slice(currentWord.length));
+            if (args.length <= 1)
+              return fileSystem.ls(this.context.path).filter(f => f.type === 'directory' && f.name.startsWith(currentWord)).map(f => f.name.slice(currentWord.length));
           case 'cat':
+          case 'notepad':
+          case 'run':
+          case 'open':
+          case 'unarchive':
+            if (args.length <= 1)
+              return fileSystem.ls(this.context.path).filter(f => f.type === 'file' && f.name.startsWith(currentWord)).map(f => f.name.slice(currentWord.length));
+          case 'echo':
+            if (args.length <= 2)
+              return [];
           case 'rm':
           case 'cp':
           case 'mv':
-            return fileSystem.ls(this.context)
-              .filter(f => f.name.startsWith(currentWord))
-              .map(f => f.name.slice(currentWord.length));
-          case 'mkdir':
-            return [];
-          case 'touch':
-            return fileSystem.ls(this.context)
-              .filter(f => f.name.startsWith(currentWord))
-              .map(f => f.name.slice(currentWord.length));
+            return fileSystem.ls(this.context.path).filter(f => f.name.startsWith(currentWord)).map(f => f.name.slice(currentWord.length));
           case 'calc':
-            if (this.isSpecialMode) {
-              return ['+', '-', '*', '/', '%']
-                .filter(op => op.startsWith(currentWord))
-                .map(op => op.slice(currentWord.length));
-            }
-            return [];
+            return ['+', '-', '*', '/', '%'].filter(op => op.startsWith(currentWord)).map(op => op.slice(currentWord.length));
           default:
             return [];
         }
@@ -1617,8 +1611,6 @@ Proceed with execution only if you are ABSOLUTELY sure this file is safe?`;
         if (this.currentHint) {
           const hintText = this.currentHint.textContent;
           this.input.textContent += hintText;
-          this.currentHint.remove();
-          this.currentHint = null;
           this.updateHint();
           this.placeCaretAtEnd(this.input);
         }
