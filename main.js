@@ -524,53 +524,6 @@ class ImageViewer {
   }
 }
 
-class AudioPlayer {
-  constructor(path) {
-    const name = path.split('/').pop();
-    this.app = new Modal(name + " - Audio Player");
-    this.appMain = this.app.appMain;
-    this.app.setupExitBtn();
-    this.app.setApp();
-    this.app.setupInfoBtn('Audio Player',
-      'The Audio Player is used for playing audio files. It has a standard set of controls, including play/pause and a timeline for navigation. The player supports popular audio formats like MP3. It’s a straightforward tool for listening to music or other sound files directly from your file system.'
-    );
-    this.music = document.createElement("audio");
-    this.music.controls = true;
-    this.music.className = "audio-player";
-    const musicElement = document.createElement("div");
-    musicElement.className = "audio-element";
-    musicElement.appendChild(this.music);
-    this.appMain.appendChild(musicElement);
-    this.appMain.style.alignItems = "center";
-    fileSystem
-      .asyncReadFile(path)
-      .then((content) => {
-        return fileSystem.decodeContent(content, 'url');
-      })
-      .then((url) => {
-        this.music.src = url;
-        this.music.addEventListener("error", (e) => {
-          console.error("Audio player: an error occurred");
-        });
-        this.setupMediaSession(name);
-      })
-      .catch((error) => {
-        alert("Error loading file: " + error.message);
-      });
-  }
-  setupMediaSession(name) {
-    if ('mediaSession' in navigator) {
-      navigator.mediaSession.metadata = new MediaMetadata({ title: name });
-      navigator.mediaSession.setActionHandler('pause', () => {
-        this.music.pause();
-      });
-      navigator.mediaSession.setActionHandler('play', () => {
-        this.music.play();
-      });
-    }
-  }
-}
-
 class FileExplorer {
   constructor() {
     this.app = new Modal("File Explorer");
@@ -920,7 +873,7 @@ class VideoPlayer {
                   <div class="play-pause-icon">${icons.pause}</div>
                   <div class="video-controls">
                     <div class="controls-top">
-                    <span class="time-current">00:00</span>
+                      <span class="time-current">00:00</span>
                       <input type="range" class="progress" value="0">
                       <span class="time-end">00:00</span>
                     </div>
@@ -1200,6 +1153,156 @@ class VideoPlayer {
       this.eventsTimer = setTimeout(() => (controls.style.pointerEvents = "none"), 200);
       if (this.mouseTimeout) clearTimeout(this.mouseTimeout);
       this.mouseTimeout = null;
+    }
+  }
+}
+
+class AudioPlayer {
+  constructor(path) {
+    const name = path.split('/').pop();
+    this.app = new Modal(name + " - Audio Player");
+    this.appMain = this.app.appMain;
+    this.app.setupExitBtn();
+    this.app.setApp();
+    this.isPlaying = false;
+    this.createPlayerUI(name);
+    this.setupEventListeners();
+    fileSystem.asyncReadFile(path).then((content) => {
+      return fileSystem.decodeContent(content, 'url');
+    }).then((url) => {
+      this.music.src = url;
+      this.setupMediaSession(name);
+    }).catch((error) => {
+      console.error("Error loading file:", error.message);
+    });
+  }
+  createPlayerUI(name) {
+    this.appMain.innerHTML = `
+      <div class="audio-player">
+        <div class="audio-element">
+          <div class="audio-info">
+            <h2 class="audio-title">${name}</h2>
+          </div>
+          <div class="progress-container">
+            <div class="time-display">
+              <span class="current-time">00:00</span>
+              <span class="total-time">00:00</span>
+            </div>
+            <input type="range" class="progress" value="0">
+          </div>
+          <div class="audio-controls">
+            <button class="control-btn play-btn">
+              <svg viewBox="0 0 24 24" fill="currentColor" id="play-icon">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            </button>
+            <div class="volume-element">
+              <button class="volume-btn">${icons.volumeUp}</button>
+              <input type="range" class="volume" min="0" max="1" step="0.1" value="1">
+            </div>
+          </div>
+        </div>
+        <audio class="audio-element-native"></audio>
+      </div>
+    `;
+    this.music = this.appMain.querySelector('.audio-element-native');
+    this.playBtn = this.appMain.querySelector('.play-btn');
+    this.playIcon = this.appMain.querySelector('#play-icon');
+    this.volumeBtn = this.appMain.querySelector('.volume-btn');
+    this.volume = this.appMain.querySelector('.volume');
+    this.progress = this.appMain.querySelector(".progress");
+    this.currentTimeDisplay = this.appMain.querySelector('.current-time');
+    this.totalTimeDisplay = this.appMain.querySelector('.total-time');
+    this.updateVolumeButton();
+  }
+  setupEventListeners() {
+    this.playBtn.addEventListener('click', () => this.togglePlay());
+    this.volumeBtn.addEventListener("click", () => this.updateVolume(this.music.muted ? this.music.volume : 0));
+    this.volume.addEventListener("input", (e) => this.updateVolume(e.target.value));
+    this.music.addEventListener('loadedmetadata', () => {
+      this.updateTimeDisplay();
+    });
+    this.music.addEventListener('timeupdate', () => {
+      if (this.music.duration) {
+        const percent = (this.music.currentTime / this.music.duration) * 100;
+        this.progress.style.setProperty("--progress", percent + "%");
+        this.progress.value = percent;
+      }
+      this.updateTimeDisplay();
+    });
+    this.progress.addEventListener("input", (e) => {
+      try {
+        this.music.currentTime = (e.target.value / 100) * this.music.duration;
+      } catch {}
+    });
+    this.music.addEventListener('play', () => {
+      this.updatePlay(true);
+    });
+    this.music.addEventListener('pause', () => {
+      this.updatePlay(false);
+    });
+    this.music.addEventListener('ended', () => {
+      this.updatePlay(false);
+    });
+    this.music.addEventListener('volumechange', () => {
+      this.updateVolumeButton();
+    });
+    
+    this.app.modWindow.addEventListener('keydown', (e) => {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        this.togglePlay();
+      }
+    });
+  }
+  
+  togglePlay() {
+    if (this.isPlaying) {
+      this.music.pause();
+    } else {
+      this.music.play().catch(e => console.log('Play failed:', e));
+    }
+  }
+  updatePlay(isPlay) {
+    this.isPlaying = isPlay;
+    this.playIcon.innerHTML = this.isPlaying ? icons.play : icons.pause;
+  }
+  updateVolume(v) {
+    this.volume.value = v;
+    this.volume.style.setProperty("--progress", v * 100 + "%");
+    if (v <= 0) this.music.muted = true;
+    else {
+      this.music.volume = v;
+      if (this.music.muted) this.music.muted = false;
+    }
+  }
+  updateVolumeButton() {
+    const v = this.music.muted ? 0 : this.music.volume;
+    if (v <= 0) {
+      this.volumeBtn.innerHTML = icons.volumeMute;
+    } else if (v <= 0.5) {
+      this.volumeBtn.innerHTML = icons.volumeDown;
+    } else {
+      this.volumeBtn.innerHTML = icons.volumeUp;
+    }
+  }
+  updateTimeDisplay() {
+    const formatTime = (seconds) => {
+      if (isNaN(seconds) || !isFinite(seconds)) return '00:00';
+      const mins = Math.floor(seconds / 60);
+      const secs = Math.floor(seconds % 60);
+      return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    };
+    this.currentTimeDisplay.textContent = formatTime(this.music.currentTime);
+    this.totalTimeDisplay.textContent = formatTime(this.music.duration);
+  }
+  setupMediaSession(name) {
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: name
+      });
+      navigator.mediaSession.setActionHandler('play', () => this.music.play());
+      navigator.mediaSession.setActionHandler('pause', () => this.music.pause());
     }
   }
 }
