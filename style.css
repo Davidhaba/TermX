@@ -96,6 +96,10 @@ body {
   color: #9253f5;
 }
 
+.desktop-icon.audio .image svg {
+  color: #21c6b1;
+}
+
 .desktop-icon .label {
   font-size: 12px;
   line-height: 1.2;
