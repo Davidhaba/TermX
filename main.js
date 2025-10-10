@@ -1260,7 +1260,7 @@ class AudioPlayer {
     if (this.isPlaying) {
       this.music.pause();
     } else {
-      this.music.play().catch(e => console.log('Play failed:', e));
+      this.music.play().catch(e => console.log('Play failed:', e.message));
     }
   }
   updatePlay(isPlay) {
