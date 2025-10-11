@@ -40,10 +40,10 @@ TermX is an interactive, web-based simulator that emulates the look and feel of 
 2. **Click desktop icons** to launch applications
 3. **Use the terminal** for command-line operations:
    ```bash
-   mkdir documents
-   cd documents
-   touch hello.txt
-   echo "Welcome to TermX" > hello.txt
+   mkdir documents &&
+   cd documents &&
+   touch hello.txt &&
+   echo "Welcome to TermX" > hello.txt &&
    cat hello.txt
 
 
