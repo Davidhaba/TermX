@@ -5,16 +5,7 @@ All notable changes to this project are documented below. Click on any version t
 ---
 
 <details>
-<summary><strong>📦 Version 1.0.0 (Initial Release)</strong></summary>
-
-Initial release of the application. Basic functionality established.
-
-</details>
-
----
-
-<details>
-<summary><strong>🚀 Version 4.3.0</strong></summary>
+<summary><strong>Version 4.3.0 (1.0 → 4.3)</strong></summary>
 
 ### Major User Changes
 - Interface is now more modern and "macOS-like": new windows, smooth animations, and control buttons for closing/minimizing.
