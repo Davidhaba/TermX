@@ -43,8 +43,8 @@ All notable changes to this project are documented below. Click on any version t
 ---
 
 <details>
-<summary><strong>🔧 Version 4.3.1</strong></summary>
+<summary><strong>Version X</strong></summary>
 
-Add your changes here...
+No changes here...
 
 </details>
