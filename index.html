@@ -7,14 +7,12 @@
   
   <title>TermX (MacOS)</title>
   <meta name="description" content="TermX is a fast and modern web terminal designed for simplicity and efficiency.">
-  <meta name="keywords" content="TermX, macos, terminal, web terminal, shell, cmd, console, command line, developer tool">
+  <meta name="keywords" content="TermX, terminal, web terminal, shell, cmd, console, command line, developer tool">
   <meta name="author" content="David Haba">
   <meta name="google-site-verification" content="khV76BTjy8gt0uqmbhU3k6r3KbBZMDV3NlGX2wKs8xg" />
   <link rel="stylesheet" href="style.css">
   <link rel="icon" type="image/png" sizes="32x32" href="icon.png">
   <link rel="icon" type="image/png" sizes="16x16" href="icon.png">
-  <link rel="icon" href="favicon.ico" type="image/x-icon">
-  <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
   <link rel="apple-touch-icon" href="icon.png">
   <meta name="theme-color" content="#00ff88">
   <meta name="color-scheme" content="dark light">
@@ -34,7 +32,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
   <script>
     const ver = 'v4.3.0',
-      username = 'root',
+      username = 'Sololearn',
       icons = {
         arrowUp: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M7 11.0001L12 6.00006L17 11.0001M12 18.0001V6.00006" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
         arrowDown: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M7 13L12 18L17 13M12 6L12 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
@@ -64,6 +62,7 @@
         fileArchive: '<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-width="2" d="M10 3v4a1 1 0 0 1-1 1H5m14-4v16a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7.914a1 1 0 0 1 .293-.707l3.914-3.914A1 1 0 0 1 9.914 3H18a1 1 0 0 1 1 1Zm-4 1h.01v.01H15V5Zm-2 2h.01v.01H13V7Zm2 2h.01v.01H15V9Zm-2 2h.01v.01H13V11Zm2 2h.01v.01H15V13Zm-2 2h.01v.01H13V15Zm2 2h.01v.01H15V17Zm-2 2h.01v.01H13V19Z"/></svg>',
         fileText: '<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 3v4a1 1 0 0 1-1 1H5m4 8h6m-6-4h6m4-8v16a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7.914a1 1 0 0 1 .293-.707l3.914-3.914A1 1 0 0 1 9.914 3H18a1 1 0 0 1 1 1Z"/></svg>',
         fileExecutable: '<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 3v4a1 1 0 0 1-1 1H5m5 4-2 2 2 2m4-4 2 2-2 2m5-12v16a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7.914a1 1 0 0 1 .293-.707l3.914-3.914A1 1 0 0 1 9.914 3H18a1 1 0 0 1 1 1Z"/></svg>',
+        fileHtml: '<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 3v4a1 1 0 0 1-1 1H5m14-4v16a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7.914a1 1 0 0 1 .293-.707l3.914-3.914A1 1 0 0 1 9.914 3H18a1 1 0 0 1 1 1ZM11 12.5l-2 2 2 2m2-4l2 2-2 2"/></svg>',
         settings: '<svg width="24" height="24" viewBox="0 0 24 24"><path fill="currentColor" d="M12,15.5A3.5,3.5 0 0,1 8.5,12A3.5,3.5 0 0,1 12,8.5A3.5,3.5 0 0,1 15.5,12A3.5,3.5 0 0,1 12,15.5M19.43,12.97C19.47,12.65 19.5,12.33 19.5,12C19.5,11.67 19.47,11.34 19.43,11L21.54,9.37C21.73,9.22 21.78,8.95 21.66,8.73L19.66,5.27C19.54,5.05 19.27,4.96 19.05,5.05L16.56,6.05C16.04,5.66 15.5,5.32 14.87,5.07L14.5,2.42C14.46,2.18 14.25,2 14,2H10C9.75,2 9.54,2.18 9.5,2.42L9.13,5.07C8.5,5.32 7.96,5.66 7.44,6.05L4.95,5.05C4.73,4.96 4.46,5.05 4.34,5.27L2.34,8.73C2.21,8.95 2.27,9.22 2.46,9.37L4.57,11C4.53,11.34 4.5,11.67 4.5,12C4.5,12.33 4.53,12.65 4.57,12.97L2.46,14.63C2.27,14.78 2.21,15.05 2.34,15.27L4.34,18.73C4.46,18.95 4.73,19.03 4.95,18.95L7.44,17.94C7.96,18.34 8.5,18.68 9.13,18.93L9.5,21.58C9.54,21.82 9.75,22 10,22H14C14.25,22 14.46,21.82 14.5,21.58L14.87,18.93C15.5,18.68 16.04,18.34 16.56,17.94L19.05,18.95C19.27,19.03 19.54,18.95 19.66,18.73L21.66,15.27C21.78,15.05 21.73,14.78 21.54,14.63L19.43,12.97Z"/></svg>',
         fullscreen: '<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M8 4H4m0 0v4m0-4 5 5m7-5h4m0 0v4m0-4-5 5M8 20H4m0 0v-4m0 4 5-5m7 5h4m0 0v-4m0 4-5-5"/></svg>',
         minFullscreen: '<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M4 8h4V4m12 4h-4V4M4 16h4v4m12-4h-4v4"/></svg>',
@@ -79,8 +78,11 @@
         warning: '<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M24 6 L44 42 L4 42 Z" fill="#FFD900" stroke="#CCAA00" stroke-width="2"/><path d="M24 16 L24 28" stroke="#000000" stroke-width="4" stroke-linecap="round"/><circle cx="24" cy="34" r="2.5" fill="#000000"/></svg>',
         question: '<svg width="48px" height="48px" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><g stroke-width="0"></g><g stroke-linecap="round" stroke-linejoin="round"></g><g><path d="M24 44C29.5228 44 34.5228 41.7614 38.1421 38.1421C41.7614 34.5228 44 29.5228 44 24C44 18.4772 41.7614 13.4772 38.1421 9.85786C34.5228 6.23858 29.5228 4 24 4C18.4772 4 13.4772 6.23858 9.85786 9.85786C6.23858 13.4772 4 18.4772 4 24C4 29.5228 6.23858 34.5228 9.85786 38.1421C13.4772 41.7614 18.4772 44 24 44Z" fill="#1E90FF" stroke="#0000CD" stroke-width="2.448" stroke-linejoin="round"></path> <path d="M24 28.6249V24.6249C27.3137 24.6249 30 21.9386 30 18.6249C30 15.3112 27.3137 12.6249 24 12.6249C20.6863 12.6249 18 15.3112 18 18.6249" stroke="white" stroke-width="2.448" stroke-linecap="round" stroke-linejoin="round"></path> <path fill-rule="evenodd" clip-rule="evenodd" d="M24 37.6249C25.3807 37.6249 26.5 36.5056 26.5 35.1249C26.5 33.7442 25.3807 32.6249 24 32.6249C22.6193 32.6249 21.5 33.7442 21.5 35.1249C21.5 36.5056 22.6193 37.6249 24 37.6249Z" fill="white"></path> </g></svg>',
         info: '<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="24" cy="24" r="21" fill="#4B9AE0" stroke="#3A7FB7" stroke-width="2"/><path d="M24 20 L24 38" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/><circle cx="24" cy="14" r="2.5" fill="#FFFFFF"/></svg>',
+        browser: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
+        taskManager: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="2" width="20" height="20" rx="2" fill="#1a1a1a" stroke="#0078d4" stroke-width="1.5"/><line x1="4" y1="6" x2="20" y2="6" stroke="#0078d4" stroke-width="1"/><line x1="4" y1="9" x2="20" y2="9" stroke="#666" stroke-width="0.8"/><line x1="4" y1="12" x2="20" y2="12" stroke="#666" stroke-width="0.8"/><line x1="4" y1="15" x2="20" y2="15" stroke="#666" stroke-width="0.8"/><line x1="4" y1="18" x2="20" y2="18" stroke="#666" stroke-width="0.8"/><circle cx="7" cy="6.5" r="1.2" fill="#FFA500"/><circle cx="7" cy="9.5" r="1.2" fill="#FF6B6B"/></svg>',
       };
     let fileSystem, desktop;
+    window.openApplications = [];
     window.onload = () => {
       if (username === 'Sololearn') alert("!! Please read this !! \n\nHey! Hope you like what you'll see. Anyway, feel free to drop a comment with any suggestions—every idea is important to me! \n\nThanks for your time and support!");
       else if (username === '') {
@@ -160,6 +162,11 @@
         {
           name: 'Kamin - ZetaMix (Sloved Reverb).mp3',
           content: 'https://dl.dropbox.com/scl/fi/a1rrytd8dggp07mug6kue/kamin.mp3?rlkey=b0bxdstk8eje3jj4z4uua54e5&st=gse4q6vp',
+          path: '/bin'
+        },
+        {
+          name: 'page.html',
+          content: 'This is a test HTML page.',
           path: '/bin'
         }];
         let needsSave = false;
@@ -621,6 +628,10 @@
             type: 'archive',
             display: 'ZIP Archive'
           },
+          'html': {
+              type: 'html',
+              display: 'Page'
+          },
         };
         for (const ext of Object.keys(typeMap).sort((a, b) => b.length - a.length)) {
           if (fileName.toLowerCase().endsWith(`.${ext}`)) {
@@ -652,6 +663,9 @@
             break;
           case 'image':
             new ImageViewer(path);
+            break;
+          case 'html':
+            new Browser(path);
             break;
           case 'executable':
             const confirmationMessage = `
@@ -827,6 +841,18 @@ Proceed with execution only if you are ABSOLUTELY sure this file is safe?`;
             class: "audio",
             icon: icons.audio,
             handler: () => fileSystem.openFile(path + 'Kamin - ZetaMix (Sloved Reverb).mp3', 'audio')
+          },
+          browser: {
+            name: "Browser",
+            class: "browser",
+            icon: icons.browser,
+            handler: () => fileSystem.openFile(path + 'page.html', 'html')
+          },
+          taskManager: {
+            name: "Task Manager",
+            class: "taskmanager",
+            icon: icons.taskManager,
+            handler: () => new TaskManager()
           },
           gitHubLink: {
             name: "Open Source",

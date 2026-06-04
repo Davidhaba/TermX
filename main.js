@@ -37,29 +37,13 @@ class Modal {
       passive: false
     });
     this.modWindow.addEventListener("mousedown", (e) => {
-      if (this.isBlocked) {
-        e.preventDefault();
-        if (this.dialogApp) this.dialogApp.setActiveWindow();
-        return;
-      }
-      this.setActiveWindow();
+      this.checkBlocking(e);
     });
     this.modWindow.addEventListener("touchstart", (e) => {
-      if (this.isBlocked) {
-        e.preventDefault();
-        if (this.dialogApp) this.dialogApp.setActiveWindow();
-        return;
-      }
-      this.setActiveWindow();
+      this.checkBlocking(e);
     });
     this.modWindow.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") this.handleClose();
-    });
-    this.modWindow.addEventListener("click", (e) => {
-      if (this.isBlocked) {
-        e.preventDefault();
-        if (this.dialogApp) this.dialogApp.setActiveWindow();
-      }
+      if (e.key === "Escape" && this.closeButton) this.closeButton.click();
     });
     this.modWindow.style.left = `${Math.random() * 50 + 10}px`;
     this.modWindow.style.top = `${Math.random() * 50 + 10}px`;
@@ -67,8 +51,25 @@ class Modal {
     this.activeTouchId = null;
     this.isBlocked = false;
     this.dialogApp = null;
+    this.parentApp = null;
+    this.childApps = [];
     this.setActiveWindow();
     this.updateTitle(title);
+
+    window.openApplications.push(this);
+  }
+  checkBlocking(e = null) {
+    if (this.isBlocked) {
+      e && e.preventDefault();
+      if (this.dialogApp) {
+        this.dialogApp.setActiveWindow();
+        return;
+      }
+      if (this.childApps && this.childApps.length === 0) {
+        this.unblockWindow();
+      }
+    }
+    this.setActiveWindow();
   }
   updateTitle(newTitle) {
     this.title.textContent = newTitle || this.title;
@@ -90,7 +91,7 @@ class Modal {
   }
   async handleClose(callback = null) {
     if (callback && typeof callback === 'function' && await callback() === false) return;
-    
+
     this.modWindow.style.animation = "anHide 0.1s forwards";
     setTimeout(() => {
       if (this.modWindow) {
@@ -105,7 +106,7 @@ class Modal {
     const button = document.createElement("div");
     button.className = "control info";
     button.innerHTML = "i";
-    button.onclick = () => { new Dialog(name, `What is ${name}?`, text, 'info', ['Ok'], 'Ok'); };
+    button.onclick = () => { new Dialog(name, `What is ${name}?`, text, 'info', ['Ok'], 'Ok', this); };
     this.titleBar.appendChild(button);
   }
   blockWindow() {
@@ -113,7 +114,6 @@ class Modal {
   }
   unblockWindow() {
     this.isBlocked = false;
-    this.setActiveWindow();
   }
   handleMinimize(toggle = true) {
     if (toggle) {
@@ -144,9 +144,9 @@ class Modal {
       clearTimeout(this.transitionTimer);
     }
     if (transit == "shadow") {
-      this.modWindow.style.transition = "box-shadow 0.3s";
+      if (this.modWindow) this.modWindow.style.transition = "box-shadow 0.3s";
     } else {
-      this.modWindow.style.transition = "all 0.3s";
+      if (this.modWindow) this.modWindow.style.transition = "all 0.3s";
     }
     this.transitionTimer = setTimeout(() => {
       if (this.modWindow) this.modWindow.style.transition = "";
@@ -178,7 +178,7 @@ class Modal {
     document.addEventListener("mouseup", this._mouseUpHandler);
     document.addEventListener("touchend", this._touchEndHandler);
   }
-  
+
   dragging(e) {
     if (!this.isDragging) return;
     let clientX, clientY;
@@ -221,14 +221,16 @@ class Modal {
     document.removeEventListener("touchend", this._touchEndHandler);
   }
   setActiveWindow() {
-    if (!this.modWindow.classList.contains("active")) {
+    if (!this.modWindow?.classList.contains("active")) {
       document.querySelectorAll(".modal-window").forEach((window) => {
         window.classList.remove("active");
       });
-      this.setTransition("shadow");
-      this.modWindow.classList.add("active");
-      this.bringToFront();
-      this.modWindow.focus();
+      if (this.modWindow) {
+        this.setTransition("shadow");
+        this.modWindow.classList.add("active");
+        this.bringToFront();
+        this.modWindow.focus();
+      }
     }
   }
   bringToFront() {
@@ -237,7 +239,9 @@ class Modal {
         parseInt(w.style.zIndex || 100, 10)
       )
     );
-    this.modWindow.style.zIndex = maxZ + 1;
+    if (this.modWindow) {
+      this.modWindow.style.zIndex = maxZ + 1;
+    }
   }
 }
 
@@ -256,6 +260,8 @@ class Dialog {
       if (parentModal) {
         parentModal.blockWindow();
         parentModal.dialogApp = app;
+        app.parentApp = parentModal;
+        parentModal.childApps.push(app);
       }
       const buttonsHtml = buttons.map(label => {
         const isPrimary = label === primaryButton;
@@ -276,9 +282,15 @@ class Dialog {
       app.modWindow.appendChild(footer);
       const closeDialog = (result) => {
         if (parentModal) {
-          parentModal.unblockWindow();
+          const index = parentModal.childApps.indexOf(app);
+          if (index > -1) {
+            parentModal.childApps.splice(index, 1);
+          }
         }
         app.handleClose();
+        parentModal.dialogApp = null;
+        parentModal.unblockWindow();
+        parentModal.setActiveWindow();
         resolve(result);
       };
       footer.querySelectorAll('[data-action]').forEach(btn => {
@@ -1303,6 +1315,360 @@ class AudioPlayer {
       });
       navigator.mediaSession.setActionHandler('play', () => this.music.play());
       navigator.mediaSession.setActionHandler('pause', () => this.music.pause());
+    }
+  }
+}
+
+
+class Browser {
+  constructor(path) {
+    const name = path.split('/').pop();
+    this.app = new Modal(name + " - Browser");
+    this.appMain = this.app.appMain;
+    this.iframe = document.createElement('iframe');
+    this.iframe.className = 'browser-iframe';
+    this.appMain.appendChild(this.iframe);
+    this.app.setupExitBtn();
+    this.app.setApp();
+    fileSystem.asyncReadFile(path).then((content) => {
+      return fileSystem.decodeContent(content, 'text');
+    }).then((html) => {
+      this.updateViewer(html);
+    }).catch((error) => {
+      console.error("Error loading file:", error.message);
+    });
+  }
+  updateViewer(html) {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+      this.iframe.srcdoc = doc.documentElement.outerHTML;
+  }
+}
+
+class TaskManager {
+  constructor() {
+    this.app = new Modal("Task Manager");
+    this.app.setApp();
+    this.appMain = this.app.appMain;
+    this.appMain.classList.add("task-manager");
+    this.selectedApp = null;
+    this.sortBy = "name";
+    this.expandedApps = new Set();
+    this.contextMenu = null;
+    this.initUI();
+    this.refreshInterval = setInterval(() => this.updateProcessList(), 1000);
+    this.app.setupExitBtn(() => {
+      clearInterval(this.refreshInterval);
+    });
+  }
+
+  initUI() {
+    this.appMain.innerHTML = `
+      <div class="tm-tabs">
+        <div class="tm-tab active" data-tab="applications">Applications</div>
+        <div class="tm-tab" data-tab="services">Services</div>
+      </div>
+      <div class="tm-content">
+        <div class="tm-tab-content active" id="applications-tab">
+          <div class="tm-list-header">
+            <div class="tm-col-name">Application Name</div>
+            <div class="tm-col-status">Status</div>
+            <div class="tm-col-type">Type</div>
+          </div>
+          <div class="tm-process-list" id="applications-list"></div>
+        </div>
+        <div class="tm-tab-content" id="services-tab">
+          <div class="tm-services-info">No services available</div>
+        </div>
+      </div>
+      <div class="tm-buttons">
+        <button class="tm-btn" id="endTask">End Task</button>
+      </div>
+    `;
+
+    this.setupTabListeners();
+    this.setupButtonListeners();
+    this.updateProcessList();
+  }
+
+  setupTabListeners() {
+    const tabs = this.appMain.querySelectorAll(".tm-tab");
+    tabs.forEach(tab => {
+      tab.addEventListener("click", (e) => {
+        tabs.forEach(t => t.classList.remove("active"));
+        const contents = this.appMain.querySelectorAll(".tm-tab-content");
+        contents.forEach(c => c.classList.remove("active"));
+
+        e.target.classList.add("active");
+        const tabName = e.target.dataset.tab;
+        this.appMain.querySelector(`#${tabName}-tab`).classList.add("active");
+      });
+    });
+  }
+
+  setupButtonListeners() {
+    const endTaskBtn = this.appMain.querySelector("#endTask");
+    endTaskBtn.addEventListener("click", () => this.endSelectedTask());
+  }
+
+  getApplications() {
+    return window.openApplications.filter(app =>
+      app && app.modWindow && app.modWindow.parentElement && !app.parentApp
+    );
+  }
+
+  updateProcessList() {
+    const appsList = this.appMain.querySelector("#applications-list");
+    if (appsList) {
+      const rootApps = this.getApplications();
+      appsList.innerHTML = this.renderProcessTree(rootApps) ||
+        '<div class="tm-empty">No running applications</div>';
+
+      this.attachProcessListeners(appsList);
+    }
+  }
+
+  renderProcessTree(apps) {
+    return apps.map((app, index) => {
+      const isActive = app.modWindow && app.modWindow.classList.contains("active");
+      const hasChildren = app.childApps && app.childApps.length > 0;
+      const isExpanded = this.expandedApps.has(app);
+
+      let status, type;
+      status = app.isMinimized ? "Minimized" : (isActive ? "Active" : app.isBlocked ? "Blocked" : "Inactive");
+      type = app.constructor.name || "Application";
+
+      const rootSelected = this.selectedApp && this.selectedApp.rootIndex === index && this.selectedApp.childIndex == null;
+      return `
+        <div class="tm-process-item ${rootSelected ? "selected" : ""}" data-index="${index}" data-parent="root" data-child="false">
+          <div class="tm-col-name">
+            ${hasChildren ? `<span class="tm-expand-btn" data-expand="${!isExpanded}">›</span>` : '<span class="tm-spacer"></span>'}
+            ${app.appName}
+            ${hasChildren ? `<span class="tm-child-count">[${app.childApps.length}]</span>` : ''}
+          </div>
+          <div class="tm-col-status">${status}</div>
+          <div class="tm-col-type">${type}</div>
+        </div>
+        ${isExpanded && app.childApps ? app.childApps.map((child, childIndex) => {
+        const childStatus = child.isMinimized ? "Minimized" : (child.modWindow && child.modWindow.classList.contains("active") ? "Active" : child.isBlocked ? "Blocked" : "Inactive");
+        const childType = "Dialog";
+        const childSelected = this.selectedApp && this.selectedApp.rootIndex === index && this.selectedApp.childIndex === childIndex;
+        return `
+            <div class="tm-process-item tm-child-process ${childSelected ? "selected" : ""}" data-parent-index="${index}" data-child-index="${childIndex}" data-child="true">
+              <div class="tm-col-name">
+                <span class="tm-child-indent">└─</span>
+                ${child.appName}
+              </div>
+              <div class="tm-col-status">${childStatus}</div>
+              <div class="tm-col-type">${childType}</div>
+            </div>
+          `;
+      }).join('') : ''}
+      `;
+    }).join("");
+  }
+
+  attachProcessListeners(container) {
+    const expandBtns = container.querySelectorAll(".tm-expand-btn");
+    expandBtns.forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const item = btn.closest(".tm-process-item");
+        const index = parseInt(item.dataset.index);
+        const apps = this.getApplications();
+        const app = apps[index];
+
+        if (this.expandedApps.has(app)) {
+          this.expandedApps.delete(app);
+        } else {
+          this.expandedApps.add(app);
+        }
+        this.updateProcessList();
+      });
+    });
+
+    const items = container.querySelectorAll(".tm-process-item");
+    items.forEach(item => {
+      item.addEventListener("click", (e) => {
+        if (e.target.classList.contains("tm-expand-btn")) return;
+
+        container.querySelectorAll(".tm-process-item").forEach(i => i.classList.remove("selected"));
+        item.classList.add("selected");
+
+        const rootIndex = parseInt(item.dataset.index ?? item.dataset.parentIndex);
+        const childIndex = item.dataset.childIndex !== undefined ? parseInt(item.dataset.childIndex) : null;
+        this.selectedApp = childIndex !== null && !Number.isNaN(childIndex) ? { rootIndex, childIndex } : { rootIndex };
+      });
+
+      item.addEventListener("dblclick", (e) => {
+        if (e.target.classList.contains("tm-expand-btn")) return;
+        const rootIndex = parseInt(item.dataset.index ?? item.dataset.parentIndex);
+        const childIndex = item.dataset.childIndex !== undefined ? parseInt(item.dataset.childIndex) : null;
+        const app = this.getApplications()[rootIndex];
+        const targetApp = childIndex !== null && app?.childApps ? app.childApps[childIndex] : app;
+        if (targetApp && targetApp.modWindow) {
+          targetApp.setActiveWindow();
+        }
+      });
+      
+      item.addEventListener("contextmenu", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.showContextMenu(e, item);
+      });
+    });
+
+    container.addEventListener("click", (e) => {
+      if (!e.target.closest('.tm-process-item')) {
+        container.querySelectorAll(".tm-process-item").forEach(i => i.classList.remove("selected"));
+        this.selectedApp = null;
+      }
+    });
+    container.addEventListener("contextmenu", (e) => {
+      if (e.target.closest('.tm-process-item')) return;
+      e.preventDefault();
+      e.stopPropagation();
+      this.showBackgroundContextMenu(e);
+    });
+  }
+
+  showContextMenu(e, item) {
+    if (this.contextMenu) this.contextMenu.remove();
+
+    const rootIndex = parseInt(item.dataset.index ?? item.dataset.parentIndex);
+    const childIndex = item.dataset.childIndex !== undefined ? parseInt(item.dataset.childIndex) : null;
+    const apps = this.getApplications();
+    const app = apps[rootIndex];
+    const targetApp = childIndex !== null && app?.childApps ? app.childApps[childIndex] : app;
+    if (!targetApp) return;
+
+    this.appMain.querySelectorAll(".tm-process-item").forEach(i => i.classList.remove("selected"));
+    item.classList.add("selected");
+    this.selectedApp = childIndex !== null && !Number.isNaN(childIndex) ? { rootIndex, childIndex } : { rootIndex };
+
+    const isRootItem = item.dataset.child === "false";
+    const rootHasChildren = isRootItem && app?.childApps && app.childApps.length > 0;
+    const isExpanded = rootHasChildren && this.expandedApps.has(app);
+
+    this.contextMenu = document.createElement("div");
+    this.contextMenu.className = "context-menu";
+
+    let html = `
+      <div class="menu-item open">Activate</div>
+      <div class="menu-item end">End Task</div>
+    `;
+    if (rootHasChildren) {
+      html += `
+        <div class="menu-item ${isExpanded ? 'collapse' : 'expand'}">${isExpanded ? 'Collapse' : 'Expand'}</div>
+      `;
+    }
+    html += `
+      <div class="menu-item refresh">Refresh List</div>
+    `;
+
+    this.contextMenu.innerHTML = html;
+    this.appMain.appendChild(this.contextMenu);
+
+    const closeMenu = () => {
+      this.contextMenu?.remove();
+      this.contextMenu = null;
+    };
+
+    const activateItem = () => {
+      if (targetApp && targetApp.modWindow) targetApp.setActiveWindow();
+      closeMenu();
+    };
+    const endItem = () => {
+      this.closeAppAndChildren(targetApp);
+      this.selectedApp = null;
+      this.updateProcessList();
+      closeMenu();
+    };
+    const toggleExpand = () => {
+      if (!rootHasChildren) return;
+      if (isExpanded) this.expandedApps.delete(app);
+      else this.expandedApps.add(app);
+      this.updateProcessList();
+      closeMenu();
+    };
+    const refreshList = () => {
+      this.updateProcessList();
+      closeMenu();
+    };
+
+    this.contextMenu.querySelector('.open').onclick = activateItem;
+    this.contextMenu.querySelector('.end').onclick = endItem;
+    if (rootHasChildren) this.contextMenu.querySelector(isExpanded ? '.collapse' : '.expand').onclick = toggleExpand;
+    this.contextMenu.querySelector('.refresh').onclick = refreshList;
+
+    const rect = this.app.modWindow.getBoundingClientRect();
+    const x = Math.max(10, Math.min(e.pageX - rect.left - window.scrollX, rect.width - this.contextMenu.offsetWidth));
+    const y = Math.max(10, Math.min(e.pageY - rect.top - window.scrollY, rect.height - this.contextMenu.offsetHeight));
+    this.contextMenu.style.left = `${x}px`;
+    this.contextMenu.style.top = `${y}px`;
+
+    document.addEventListener("click", (event) => {
+      if (!event.target.closest(".context-menu")) closeMenu();
+    }, { once: true });
+  }
+
+  showBackgroundContextMenu(e) {
+    if (this.contextMenu) this.contextMenu.remove();
+    this.contextMenu = document.createElement("div");
+    this.contextMenu.className = "context-menu";
+    this.contextMenu.innerHTML = `<div class="menu-item refresh">Refresh List</div>`;
+    this.appMain.appendChild(this.contextMenu);
+
+    const closeMenu = () => {
+      this.contextMenu?.remove();
+      this.contextMenu = null;
+    };
+
+    this.contextMenu.querySelector('.refresh').onclick = () => {
+      this.updateProcessList();
+      closeMenu();
+    };
+
+    const rect = this.app.modWindow.getBoundingClientRect();
+    const x = Math.max(10, Math.min(e.pageX - rect.left - window.scrollX, rect.width - this.contextMenu.offsetWidth));
+    const y = Math.max(10, Math.min(e.pageY - rect.top - window.scrollY, rect.height - this.contextMenu.offsetHeight));
+    this.contextMenu.style.left = `${x}px`;
+    this.contextMenu.style.top = `${y}px`;
+
+    document.addEventListener("click", (event) => {
+      if (!event.target.closest(".context-menu")) closeMenu();
+    }, { once: true });
+  }
+
+  closeAppAndChildren(app) {
+    if (!app) return;
+    if (Array.isArray(app.childApps) && app.childApps.length > 0) {
+      [...app.childApps].forEach(child => this.closeAppAndChildren(child));
+    }
+    if (app.parentApp) {
+      const idx = app.parentApp.childApps.indexOf(app);
+      if (idx > -1) app.parentApp.childApps.splice(idx, 1);
+      if (app.parentApp.childApps && app.parentApp.childApps.length === 0) app.parentApp.unblockWindow();
+      app.parentApp = null;
+    }
+    app.childApps = [];
+    if (app.modWindow) {
+      app.handleClose();
+    }
+  }
+
+  endSelectedTask() {
+    if (this.selectedApp !== null) {
+      const apps = this.getApplications();
+      const rootIndex = this.selectedApp.rootIndex;
+      const childIndex = this.selectedApp.childIndex !== undefined ? this.selectedApp.childIndex : null;
+      const app = apps[rootIndex];
+      const targetApp = childIndex !== null && app?.childApps ? app.childApps[childIndex] : app;
+      if (targetApp && targetApp.modWindow) {
+        this.closeAppAndChildren(targetApp);
+        this.selectedApp = null;
+        this.updateProcessList();
+      }
     }
   }
 }
