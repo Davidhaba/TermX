@@ -84,6 +84,49 @@ class Modal {
     minButton.addEventListener("click", () => this.handleMinimize());
     maxButton.addEventListener("click", () => this.handleMaximize());
     this.modWindow.classList.add("app-size");
+    this.modWindow.style.width = window.innerWidth > 600 ? "600px" : "90vw";
+    this.setupResizeHandle();
+  }
+
+  setupResizeHandle() {
+    const resizeHandle = document.createElement('div');
+    resizeHandle.className = 'resize-handle';
+    this.modWindow.appendChild(resizeHandle);
+    let isResizing = false;
+    let startX, startY, startWidth, startHeight;
+    const startResize = (e) => {
+      if (!this.modWindow || this.isFullscreen || this.isBlocked) return;
+      isResizing = true;
+      startX = e.touches ? e.touches[0].clientX : e.clientX;
+      startY = e.touches ? e.touches[0].clientY : e.clientY;
+      const rect = this.modWindow.getBoundingClientRect();
+      startWidth = rect.width;
+      startHeight = rect.height;
+      this.modWindow.classList.add("resizing");
+      e.preventDefault();
+    };
+    const doResize = (e) => {
+      if (!this.modWindow || !isResizing || this.isFullscreen || this.isBlocked) return;
+      const currentX = e.touches ? e.touches[0].clientX : e.clientX;
+      const currentY = e.touches ? e.touches[0].clientY : e.clientY;
+      const diffX = currentX - startX;
+      const diffY = currentY - startY;
+      const newWidth = Math.max(0, startWidth + diffX);
+      const newHeight = Math.max(0, startHeight + diffY);
+      this.modWindow.style.width = newWidth + 'px';
+      this.modWindow.style.height = newHeight + 'px';
+    };
+    const stopResize = () => {
+      if (!isResizing) return;
+      isResizing = false;
+      if (this.modWindow) this.modWindow.classList.remove("resizing");
+    };
+    resizeHandle.addEventListener('mousedown', startResize);
+    resizeHandle.addEventListener('touchstart', startResize, { passive: false });
+    document.addEventListener('mousemove', doResize);
+    document.addEventListener('touchmove', doResize, { passive: false });
+    document.addEventListener('mouseup', stopResize);
+    document.addEventListener('touchend', stopResize);
   }
   setupExitBtn(callback = null) {
     if (this.closeButton)
@@ -92,7 +135,7 @@ class Modal {
   async handleClose(callback = null) {
     if (callback && typeof callback === 'function' && await callback() === false) return;
 
-    this.modWindow.style.animation = "anHide 0.1s forwards";
+    if (this.modWindow) this.modWindow.style.animation = "anHide 0.1s forwards";
     setTimeout(() => {
       if (this.modWindow) {
         this.modWindow.style.display = "none";
@@ -229,9 +272,9 @@ class Modal {
         this.setTransition("shadow");
         this.modWindow.classList.add("active");
         this.bringToFront();
-        this.modWindow.focus();
       }
     }
+    if (this.modWindow && !this.modWindow.contains(document.activeElement)) this.modWindow.focus();
   }
   bringToFront() {
     const maxZ = Math.max(
@@ -307,10 +350,10 @@ class TextEditor {
   constructor(path = null) {
     this.path = path;
     this.name = path?.split('/').pop();
-    this.app = new Modal(`${name || 'New File'} - Text Editor`);
+    this.app = new Modal(`${this.name || 'New File'} - Text Editor`);
     this.app.setApp();
     this.app.setupInfoBtn('Text Editor',
-      'The Text Editor is a simple tool for creating and editing text files. You can type and edit content and save your work directly to the file system. It supports keyboard shortcuts like **Ctrl+S** to save and **Ctrl+N** to create a new file. It also provides a warning before you exit with unsaved changes.'
+      'Text Editor is a simple file editor for creating and saving text files in the virtual filesystem. It supports shortcuts like Ctrl+S to save and Ctrl+N for a new document.'
     );
     this.textarea = document.createElement('textarea');
     this.textarea.className = 'text-editor';
@@ -364,6 +407,7 @@ class TextEditor {
     const infoBar = document.createElement('div');
     infoBar.className = 'editor-info-bar';
     infoBar.innerHTML = `
+          <div class="info-item status" data-info="status"></div>
           <div class="info-item" data-info="lines">Lines: 0</div>
           <div class="info-item" data-info="chars">Chars: 0</div>
           <div class="info-item" data-info="size">Size: 0 B</div>
@@ -384,6 +428,7 @@ class TextEditor {
   }
   setupEventListeners() {
     this.textarea.addEventListener('keydown', (e) => {
+      this.updateInfoBar();
       if (e.ctrlKey) {
         switch (e.key.toLowerCase()) {
           case 's':
@@ -398,6 +443,7 @@ class TextEditor {
       }
     });
     this.textarea.addEventListener('keyup', () => this.updateInfoBar());
+    this.updateInfoBar();
     this.app.setupExitBtn(async () => {
       if (await this.checkChanges()) {
         const isSave = await this.confirmSave();
@@ -428,7 +474,7 @@ class TextEditor {
       this.app.updateTitle(`${this.name} - Text Editor`);
       this.updateInfoBar();
     } catch (error) {
-      ththis.showStatus(`Error loading file: ${error.message}`, 'error');
+      this.showStatus(`Error loading file: ${error.message}`, 'error');
     }
   }
   async getFileContent() {
@@ -449,7 +495,7 @@ class TextEditor {
   async saveFile(isSaveAs = false) {
     try {
       const newPath = (isSaveAs || !this.path) ?
-        prompt('Enter file path:', '/home/untitled.txt') :
+        prompt('Enter file path:', (this.path || '/home/untitled.txt')) :
         this.path;
       if (!newPath) return;
       const dirPath = newPath.split('/').slice(0, -1).join('/');
@@ -457,7 +503,8 @@ class TextEditor {
       const success = fileSystem.writeFile(newPath, this.textarea.value);
       if (success) {
         this.path = newPath;
-        this.app.updateTitle(`${this.path} - Text Editor`);
+        this.name = newPath.split('/').pop();
+        this.app.updateTitle(`${this.name} - Text Editor`);
         this.showStatus('File saved successfully!', 'success');
       } else {
         throw new Error('Failed to save file');
@@ -472,27 +519,34 @@ class TextEditor {
       if (isSave === null) return;
     }
     this.path = '';
+    this.name = 'New File';
     this.textarea.value = '';
-    this.app.updateTitle('New File - Text Editor');
+    this.app.updateTitle(`${this.name} - Text Editor`);
     this.updateInfoBar();
   }
   showStatus(message, type = 'info') {
-    let statusBar = this.app.appMain.querySelector('.status-bar');
-    if (statusBar) {
-      removeStatus(statusBar);
-    }
-    statusBar = document.createElement('div');
-    this.app.appMain.appendChild(statusBar);
-    statusBar.textContent = message;
-    statusBar.className = `status-bar ${type}`;
-    setTimeout(() => statusBar.classList.add('show'), 0);
-    setTimeout(() => {
-      removeStatus(statusBar);
-    }, 3000);
-    
-    function removeStatus(status) {
-      status?.classList?.remove('show');
-      setTimeout(() => status?.remove(), 500);
+    const infoStatus = this.app.appMain.querySelector('[data-info="status"]');
+    if (infoStatus) {
+      const isExists = infoStatus.classList.contains('show');
+      if (isExists) {
+        infoStatus.classList.remove('show');
+        setTimeout(() => {
+          this.showStatus(message, type);
+        }, 100);
+        return;
+      }
+      infoStatus.textContent = message;
+      infoStatus.className = `info-item status ${type}`;
+      setTimeout(() => infoStatus.classList.add('show'), 0);
+      if (this.statusTimer) {
+        clearTimeout(this.statusTimer);
+        this.statusTimer = null;
+      }
+      this.statusTimer = setTimeout(() => {
+        infoStatus.classList.remove('show');
+        this.statusTimer = null;
+      }, 5000);
+      return;
     }
   }
 }
@@ -514,7 +568,7 @@ class ImageViewer {
     this.app.setupExitBtn();
     this.app.setApp();
     this.app.setupInfoBtn('Image Viewer',
-      'The Image Viewer is designed to display image files. It automatically adjusts to show the image content, with a clean interface that puts the focus on the media. It supports various image formats that can be loaded from the file system. Simply double-click on any image file to open it in this viewer.'
+      'Image Viewer displays image files in a clean, focused window and supports common formats loaded from the filesystem.'
     );
     const imgElement = document.createElement("div");
     imgElement.className = "image-imgElement";
@@ -544,9 +598,10 @@ class FileExplorer {
     this.modWindow = this.app.modWindow;
     this.app.setApp();
     this.app.setupInfoBtn('File Explorer',
-      'The File Explorer is a simple file management tool. You can navigate through folders by double-clicking on them and go back using the "←" button. You can sort items by name, type, and size using the buttons at the top. To manage files and folders, right-click on an item to open a context menu with options like "Open", "Rename", and "Delete". You can also create new files or folders by right-clicking in an empty space within the window.'
+      'File Explorer lets you browse folders, open items, and manage files with sorting controls and a context menu for Open, Rename, Delete, and new items.'
     );
     this.selectedItem = null;
+    this.renamingItem = null;
     this.sortType = "name";
     this.sortOrder = "asc";
     this.contextMenu = null;
@@ -603,12 +658,73 @@ class FileExplorer {
     });
     this.fileList.addEventListener("dblclick", () => this.openSelected());
     this.fileList.addEventListener("contextmenu", (e) => {
+      if (!e.isLongPress && (e.pointerType === 'touch' || e.type.startsWith('touch'))) {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
       e.preventDefault();
       this.showContextMenu(e);
     });
+    this.setupLongPressMenu();
+
     this.sortButtons.forEach(
       (btn) => (btn.onclick = () => this.handleSort(btn.dataset.sort))
     );
+  }
+
+  setupLongPressMenu() {
+    let longPressTimer = null;
+    let longPressTarget = null;
+    let touchStartEvent = null;
+    const startLongPress = (e) => {
+      const renameInput = this.fileList.querySelector('.rename-input');
+      if (renameInput && renameInput.contains(e.target)) {
+        e.stopPropagation();
+        if (longPressTimer) {
+          clearTimeout(longPressTimer);
+          longPressTimer = null;
+        }
+        return;
+      }
+      longPressTarget = e.target.closest(".file-item");
+      touchStartEvent = e;
+      if (e.target.closest(".emptyFolder")) return;
+      longPressTimer = setTimeout(() => {
+        if (longPressTarget) {
+          if (this.selectedItem !== longPressTarget.dataset.name) {
+            this.clearSelection();
+            longPressTarget.classList.add("selected");
+            this.selectedItem = longPressTarget.dataset.name;
+          }
+        } else {
+          this.clearSelection();
+        }
+        const touch = touchStartEvent.touches[0];
+        const synthEvent = new MouseEvent('contextmenu', {
+          clientX: touch.clientX,
+          clientY: touch.clientY,
+          pageX: touch.pageX,
+          pageY: touch.pageY,
+          bubbles: true,
+          cancelable: true
+        });
+        synthEvent.isLongPress = true;
+        this.fileList.dispatchEvent(synthEvent);
+      }, 500);
+    };
+    const endLongPress = () => {
+      if (longPressTimer) {
+        clearTimeout(longPressTimer);
+        longPressTimer = null;
+      }
+      longPressTarget = null;
+      touchStartEvent = null;
+    };
+    this.fileList.addEventListener("touchstart", startLongPress, { passive: true });
+    this.fileList.addEventListener("touchend", endLongPress);
+    this.fileList.addEventListener("touchmove", endLongPress);
+    this.fileList.addEventListener("touchcancel", endLongPress);
   }
   updatePath() {
     this.currentPath.readOnly = true;
@@ -619,16 +735,16 @@ class FileExplorer {
         if (item.type === 'file') fileSystem.openFile(enteredPath);
         else this.context.path = fileSystem.cd(this.context.path, enteredPath);
       }
-    } catch (e) {}
+    } catch (e) { }
     this.updateUI();
   }
   handleSort(type) {
     this.sortOrder =
       this.sortType === type ?
-      this.sortOrder === "asc" ?
-      "desc" :
-      "asc" :
-      "asc";
+        this.sortOrder === "asc" ?
+          "desc" :
+          "asc" :
+        "asc";
     this.sortType = type;
     this.updateFileList();
     this.sortButtons.forEach((btn) => {
@@ -636,7 +752,7 @@ class FileExplorer {
         (btn.dataset.sort === this.sortType ? this.sortOrder === "asc" ? " ↑" : " ↓" : "");
     });
   }
-  
+
   getSortedFiles() {
     let files = fileSystem.ls(this.context.path) || [];
     return files.sort((a, b) => {
@@ -656,20 +772,117 @@ class FileExplorer {
   formatItemInfo(item) {
     return fileSystem.formatSize(fileSystem.getItemSize(item), item.type);
   }
-  
+
+  escapeHtml(text) {
+    return String(text)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
   updateFileList() {
+    const currentDir = fileSystem._resolvePath(this.context.path);
+    if (!currentDir) {
+      this.navigateUp();
+      return;
+    }
+
     const files = this.getSortedFiles();
+    if (this.selectedItem && !files.find((f) => f.name === this.selectedItem)) {
+      this.clearSelection();
+    }
     this.fileList.innerHTML =
-      files.map((f) => `
-      <div class="file-item ${f.type} ${
-            this.selectedItem === f.name ? "selected" : ""
-          }" data-name="${f.name}">
+      files.map((f) => {
+        const isRenaming = this.renamingItem === f.name;
+        const fileNameHtml = isRenaming
+          ? `<input class="rename-input" type="text" value="${this.escapeHtml(f.name)}" />`
+          : this.escapeHtml(f.name);
+        return `
+      <div class="file-item ${f.type} ${this.selectedItem === f.name ? 'selected' : ''} ${isRenaming ? 'renaming' : ''}" data-name="${this.escapeHtml(f.name)}">
           <span class="file-icon">${this.getFileIcon(f)}</span>
-          <span class="file-name">${f.name}</span>
-        <span class="file-type">${f.type === 'directory' ? 'Folder' : fileSystem.getFileType(f.name).display}</span>
-        <span class="file-size">${this.formatItemInfo(f)}</span>
-      </div>`)
-      .join("") || '<p class="emptyFolder">This folder is empty.</p>';
+          <span class="file-name">${fileNameHtml}</span>
+          <span class="file-type">${f.type === 'directory' ? 'Folder' : fileSystem.getFileType(f.name).display}</span>
+          <span class="file-size">${this.formatItemInfo(f)}</span>
+      </div>`;
+      })
+        .join("") || '<p class="emptyFolder">This folder is empty.</p>';
+    if (this.selectedItem) {
+      const selectedElement = this.fileList.querySelector(`.file-item[data-name="${this.escapeHtml(this.selectedItem)}"]`);
+      if (selectedElement) {
+        selectedElement.scrollIntoView();
+      }
+    }
+    const renameInput = this.fileList.querySelector('.rename-input');
+    if (renameInput) {
+      const oldName = this.renamingItem;
+      const commitRename = (value) => {
+        if (!this.renamingItem) {
+          this.updateFileList();
+          return;
+        }
+        const trimmed = String(value || '').trim();
+        if (!trimmed || trimmed === oldName) {
+          this.renamingItem = null;
+          this.updateFileList();
+          return;
+        }
+
+        const matches = fileSystem.checkForbiddenChars(trimmed);
+        if (matches) {
+          alert(`The filename contains forbidden characters: ${matches.join(', ')}`);
+          return;
+        }
+        
+        try {
+          fileSystem.mv(
+            fileSystem.getResolvedPath(this.context.path, oldName),
+            fileSystem.getResolvedPath(this.context.path, trimmed)
+          );
+          this.selectedItem = trimmed;
+        } catch (e) {
+          new Dialog('File Explorer - Error', 'An error occurred', e.message, 'error', ['Ok'], 'Ok', this.app);
+        }
+        this.renamingItem = null;
+        this.updateFileList();
+      };
+      let renameCommittedByEnter = false;
+      renameInput.addEventListener('keydown', (e) => {
+        if (!this.renamingItem || this.selectedItem !== this.renamingItem) return;
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          e.stopPropagation();
+          renameCommittedByEnter = true;
+          this.app?.setActiveWindow();
+          commitRename(renameInput.value);
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          e.stopPropagation();
+          renameCommittedByEnter = false;
+          this.renamingItem = null;
+          this.updateFileList();
+          this.app?.setActiveWindow();
+        }
+      });
+      renameInput.addEventListener('blur', () => {
+        if (renameCommittedByEnter) {
+          renameCommittedByEnter = false;
+          return;
+        }
+        commitRename(renameInput.value);
+      });
+      renameInput.addEventListener('click', (e) => {
+      });
+      renameInput.addEventListener('dblclick', (e) => {
+        e.stopPropagation();
+      });
+      renameInput.addEventListener('contextmenu', (e) => {
+        e.stopPropagation();
+      });
+      renameInput.focus();
+      renameInput.select();
+    }
   }
   getFileIcon(f) {
     if (f.type === "directory" && icons.folder) return icons.folder;
@@ -681,13 +894,26 @@ class FileExplorer {
     return icons.fileUnvalid;
   }
   navigateUp() {
-    const newPath = fileSystem.cd(this.context.path, "..");
-    if (newPath) this.context.path = newPath;
-    this.updateUI();
+    try {
+      const newPath = fileSystem.cd(this.context.path, "..");
+      if (newPath) this.context.path = newPath;
+      this.updateUI();
+    } catch (e) {
+      new Dialog('File Explorer - Error', 'An error occurred', e.message, 'error', ['Ok'], 'Ok', this.app);
+    }
   }
   createNewFolder() {
-    const n = prompt("Enter folder name:");
-    n && fileSystem.mkdir(this.context.path, n) && this.updateFileList();
+    let newName = "New Folder";
+    let counter = 0;
+    while (fileSystem.ls(this.context.path).some(item => item.name === newName)) {
+      counter++;
+      newName = `New Folder (${counter})`;
+    }
+    fileSystem.mkdir(this.context.path, newName);
+    this.clearSelection();
+    this.renamingItem = newName;
+    this.selectedItem = newName;
+    this.updateFileList();
   }
   showContextMenu(e) {
     if (this.contextMenu) this.contextMenu.remove();
@@ -718,16 +944,19 @@ class FileExplorer {
     }
     this.contextMenu.innerHTML = html;
     if (this.selectedItem) {
-      this.contextMenu.querySelector(".open").onclick = () =>
+      this.contextMenu.querySelector(".open").onclick = () => {
         this.openSelected();
+        this.clearSelection();
+      };
       if (file && file.type === "file")
-        this.contextMenu.querySelector(".open-as").onclick = () =>
-        this.openAsSelected();
+        this.contextMenu.querySelector(".open-as").onclick = () => {
+          this.openAsSelected();
+          this.clearSelection();
+        };
       this.contextMenu.querySelector(".rename").onclick = () =>
         this.renameSelected();
       this.contextMenu.querySelector(".delete").onclick = async () => {
         await this.deleteSelected();
-        this.clearSelection();
       }
     } else {
       this.contextMenu.querySelector(".refresh").onclick = () =>
@@ -758,7 +987,6 @@ class FileExplorer {
     this.contextMenu.style.left = `${x}px`;
     this.contextMenu.style.top = `${y}px`;
     document.addEventListener("click", (e) => {
-      if (e.target.closest(".context-menu") && !e.target.closest(".delete")) this.clearSelection();
       this.contextMenu?.remove();
     }, { once: true });
   }
@@ -769,13 +997,25 @@ class FileExplorer {
       .forEach((i) => i.classList.remove("selected"));
   }
   createNewFile() {
-    const n = prompt("Enter file name:");
-    n && fileSystem.touch(this.context.path, n) && this.updateFileList();
+    let newName = "New File";
+    let counter = 0;
+    while (fileSystem.ls(this.context.path).some(item => item.name === newName)) {
+      counter++;
+      newName = `New File (${counter})`;
+    }
+    fileSystem.touch(this.context.path, newName);
+    this.clearSelection();
+    this.renamingItem = newName;
+    this.selectedItem = newName;
+    this.updateFileList();
+
   }
   updateUI() {
-    this.clearSelection();
     this.fileList.innerHTML = "";
-    this.currentPath.value = this.context.path;
+    if (this.currentPath.value !== this.context.path) {
+      this.clearSelection();
+      this.currentPath.value = this.context.path;
+    }
     setTimeout(() => this.updateFileList(), 20);
   }
   openSelected() {
@@ -805,25 +1045,23 @@ class FileExplorer {
     }
   }
   renameSelected() {
-    const n = prompt("New name:", this.selectedItem);
-    if (!n) return;
-    try {
-      fileSystem.mv(fileSystem.getResolvedPath(this.context.path, this.selectedItem), fileSystem.getResolvedPath(this.context.path, n));
-      this.updateUI();
-    } catch (e) {
-      new Dialog('File Explorer - Error', 'An error occurred', e.message, 'error', ['Ok'], 'Ok', this.app);
-    }
+    if (!this.selectedItem) return;
+    this.renamingItem = this.selectedItem;
+    this.updateFileList();
   }
   async deleteSelected() {
     try {
-      const itemPath = this.context.path.endsWith('/') ?
-        this.context.path + this.selectedItem :
-        this.context.path + '/' + this.selectedItem;
+      const path = this.context.path;
+      const itemName = this.selectedItem;
+      if (!itemName) return;
+      const itemPath = path.endsWith('/') ?
+        path + itemName :
+        path + '/' + itemName;
       const item = fileSystem._resolvePath(itemPath);
       if (!item) {
         new Dialog('File Explorer - Error',
           'Item not found.',
-          `The item "${this.selectedItem}" does not exist at the current path.`,
+          `The item "${itemName}" does not exist at the current path.`,
           'error', ['Ok'], 'Ok', this.app);
         this.updateUI();
         return;
@@ -831,18 +1069,18 @@ class FileExplorer {
       if (item.parameters.isSystem === true) {
         new Dialog('File Explorer - Access Denied',
           'Cannot delete system item.',
-          `The item "${this.selectedItem}" is a protected system file or directory and cannot be modified.`,
-          'warning', ['Ok'], 'Ok', this.app);
+          `The item "${itemName}" is a protected system ${item.type === 'directory' ? 'directory' : 'file'} and cannot be modified.`,
+          'error', ['Ok'], 'Ok', this.app);
         return;
       }
       const answer = await new Dialog(
         'File Explorer - Confirm Deletion',
-        `Are you sure you want to permanently delete "${this.selectedItem}"?`,
-        'This file will be permanently removed from the system and cannot be restored.',
+        `Are you sure you want to permanently delete "${itemName}"?`,
+        `This ${item.type === 'directory' ? 'directory' : 'file'} will be permanently removed from the system and cannot be restored.`,
         'warning', ['Cancel', 'Delete'], 'Cancel', this.app
       );
       if (answer === 'Delete') {
-        fileSystem.rm(this.context.path, this.selectedItem, true);
+        fileSystem.rm(path, itemName, true);
         this.updateUI();
       }
     } catch (e) {
@@ -867,7 +1105,7 @@ class VideoPlayer {
     this.appMain = this.app.appMain;
     this.app.setApp();
     this.app.setupInfoBtn('Video Player',
-      'The Video Player is a versatile tool for watching videos. It includes comprehensive controls for playback, volume, and progress, as well as an advanced settings menu. Here you can adjust the video scale to "Fit", "Fill", or "Stretch", change the playback speed, and control the zoom level. It also supports keyboard shortcuts for easy control (e.g., Space to play/pause, F for fullscreen, and arrow keys for seeking).'
+      'Video Player plays videos with playback, volume, scale, and speed controls. It also supports keyboard shortcuts like Space to toggle playback and F for fullscreen.'
     );
     this.video = document.createElement("video");
     this.controlsVisible = true;
@@ -903,33 +1141,31 @@ class VideoPlayer {
                                 <label>Scale:</label>
                                 <select class="video-scale">
                                     ${this.videoScales
-                                      .map(
-                                        (opt) =>
-                                          `<option value="${opt.value}">${opt.name}</option>`
-                                      )
-                                      .join("")}
+        .map(
+          (opt) =>
+            `<option value="${opt.value}">${opt.name}</option>`
+        )
+        .join("")}
                                 </select>
                             </div>
                             <div class="settings-item">
                                 <label>Speed:</label>
                                 <select class="playback-speed">
                                     ${this.playbackSpeeds
-                                      .map(
-                                        (speed) =>
-                                          `<option value="${speed}" ${
-                                            speed === 1 ? "selected" : ""
-                                          }>${speed}x</option>`
-                                      )
-                                      .join("")}
+        .map(
+          (speed) =>
+            `<option value="${speed}" ${speed === 1 ? "selected" : ""
+            }>${speed}x</option>`
+        )
+        .join("")}
                                 </select>
                             </div>
                             <div class="settings-item">
                                 <label>Zoom:</label>
                                 <div class="zoom-controls">
                                     <button class="zoom-out">-</button>
-                                    <span class="zoom-level">${
-                                      this.zoomLevel
-                                    }%</span>
+                                    <span class="zoom-level">${this.zoomLevel
+      }%</span>
                                     <button class="zoom-in">+</button>
                                 </div>
                             </div>
@@ -981,16 +1217,22 @@ class VideoPlayer {
         const savePlay = this.video.paused;
         await this.video.play();
         if (savePlay) this.video.pause();
-      } catch {}
+      } catch { }
     });
     this.video.addEventListener("error", (e) => {
       console.error("Video player: an error occurred");
     });
     this.videoContainer.addEventListener('fullscreenchange', () => {
+      const orientation = screen?.orientation;
+      if (!orientation) return;
       if (document.fullscreenElement) {
-        screen.orientation.lock('landscape');
+        if (typeof orientation.lock === 'function') {
+          orientation.lock('landscape').catch(() => { });
+        }
       } else {
-        screen.orientation.unlock();
+        if (typeof orientation.unlock === 'function') {
+          orientation.unlock();
+        }
       }
     });
     this.playPauseBtn = this.appMain.querySelector(".play-pause-btn");
@@ -1045,12 +1287,12 @@ class VideoPlayer {
     this.video.addEventListener("canplay", () => this.setLoading(false));
     this.video.addEventListener("stalled", () => this.setLoading(true));
     this.video.addEventListener("error", () => this.setLoading(false));
-    
+
     this.progress.addEventListener("input", (e) => {
       try {
         const time = (e.target.value / 100) * this.video.duration;
         this.video.currentTime = time;
-      } catch {}
+      } catch { }
     });
     this.volumeBtn.addEventListener("click", () => this.updateVolume(this.video.muted ? this.video.volume : 0));
     this.volume.addEventListener("input", (e) => this.updateVolume(e.target.value));
@@ -1139,12 +1381,12 @@ class VideoPlayer {
     this.timeCurrent.textContent = formatTime(this.video.currentTime);
     this.timeEnd.textContent = formatTime(this.video.duration);
   }
-  
+
   toggleFullscreen() {
     if (document.fullscreenElement) {
-      document.exitFullscreen().then(() => { this.fullscreenBtn.innerHTML = icons.fullscreen; }).catch(() => {});
+      document.exitFullscreen().then(() => { this.fullscreenBtn.innerHTML = icons.fullscreen; }).catch(() => { });
     } else {
-      this.videoContainer.requestFullscreen().then(() => { this.fullscreenBtn.innerHTML = icons.minFullscreen; }).catch(() => {});
+      this.videoContainer.requestFullscreen().then(() => { this.fullscreenBtn.innerHTML = icons.minFullscreen; }).catch(() => { });
     }
   }
   showControls() {
@@ -1176,6 +1418,9 @@ class AudioPlayer {
     this.appMain = this.app.appMain;
     this.app.setupExitBtn();
     this.app.setApp();
+    this.app.setupInfoBtn('Audio Player',
+      'Audio Player plays music files with simple playback, volume, and progress controls, making it easy to listen to audio from the file system.'
+    );
     this.isPlaying = false;
     this.createPlayerUI(name);
     this.setupEventListeners();
@@ -1245,7 +1490,7 @@ class AudioPlayer {
     this.progress.addEventListener("input", (e) => {
       try {
         this.music.currentTime = (e.target.value / 100) * this.music.duration;
-      } catch {}
+      } catch { }
     });
     this.music.addEventListener('play', () => {
       this.updatePlay(true);
@@ -1259,7 +1504,7 @@ class AudioPlayer {
     this.music.addEventListener('volumechange', () => {
       this.updateVolumeButton();
     });
-    
+
     this.app.modWindow.addEventListener('keydown', (e) => {
       if (e.code === 'Space') {
         e.preventDefault();
@@ -1267,7 +1512,7 @@ class AudioPlayer {
       }
     });
   }
-  
+
   togglePlay() {
     if (this.isPlaying) {
       this.music.pause();
@@ -1319,7 +1564,6 @@ class AudioPlayer {
   }
 }
 
-
 class Browser {
   constructor(path) {
     const name = path.split('/').pop();
@@ -1330,6 +1574,9 @@ class Browser {
     this.appMain.appendChild(this.iframe);
     this.app.setupExitBtn();
     this.app.setApp();
+    this.app.setupInfoBtn('Browser',
+      'Browser opens HTML files in a safe embedded view so you can preview page content directly from the virtual filesystem.'
+    );
     fileSystem.asyncReadFile(path).then((content) => {
       return fileSystem.decodeContent(content, 'text');
     }).then((html) => {
@@ -1339,9 +1586,9 @@ class Browser {
     });
   }
   updateViewer(html) {
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(html, 'text/html');
-      this.iframe.srcdoc = doc.documentElement.outerHTML;
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    this.iframe.srcdoc = doc.documentElement.outerHTML;
   }
 }
 
@@ -1349,17 +1596,38 @@ class TaskManager {
   constructor() {
     this.app = new Modal("Task Manager");
     this.app.setApp();
+    this.app.setupInfoBtn('Task Manager',
+      'Task Manager shows running apps, process status, and browser power info so you can inspect or stop tasks.'
+    );
     this.appMain = this.app.appMain;
     this.appMain.classList.add("task-manager");
     this.selectedApp = null;
     this.sortBy = "name";
     this.expandedApps = new Set();
     this.contextMenu = null;
+    this.webglSupported = this.checkWebGLSupport();
     this.initUI();
     this.refreshInterval = setInterval(() => this.updateProcessList(), 1000);
+    this.infoInterval = setInterval(() => this.updateBrowserInfo(), 1000);
     this.app.setupExitBtn(() => {
       clearInterval(this.refreshInterval);
+      clearInterval(this.infoInterval);
     });
+  }
+
+  checkWebGLSupport() {
+    try {
+      const canvas = document.createElement('canvas');
+      const gl = canvas.getContext('webgl') || canvas.getContext('webgl2');
+      const supported = !!gl;
+      if (gl) {
+        gl.getExtension('WEBGL_lose_context')?.loseContext();
+      }
+      canvas.remove();
+      return supported;
+    } catch {
+      return false;
+    }
   }
 
   initUI() {
@@ -1367,28 +1635,36 @@ class TaskManager {
       <div class="tm-tabs">
         <div class="tm-tab active" data-tab="applications">Applications</div>
         <div class="tm-tab" data-tab="services">Services</div>
+        <div class="tm-tab" data-tab="browser-info">Power Info</div>
       </div>
       <div class="tm-content">
         <div class="tm-tab-content active" id="applications-tab">
-          <div class="tm-list-header">
-            <div class="tm-col-name">Application Name</div>
-            <div class="tm-col-status">Status</div>
-            <div class="tm-col-type">Type</div>
+          <div class="tm-list-main">
+            <div class="tm-list-header">
+              <div class="tm-col-name">Application Name</div>
+              <div class="tm-col-status">Status</div>
+              <div class="tm-col-type">Type</div>
+            </div>
+            <div class="tm-process-list" id="applications-list"></div>
           </div>
-          <div class="tm-process-list" id="applications-list"></div>
+          <div class="tm-buttons">
+            <button class="tm-btn" id="endTask">End Task</button>
+          </div>
         </div>
         <div class="tm-tab-content" id="services-tab">
           <div class="tm-services-info">No services available</div>
         </div>
-      </div>
-      <div class="tm-buttons">
-        <button class="tm-btn" id="endTask">End Task</button>
+        <div class="tm-tab-content" id="browser-info-tab">
+          <div class="tm-info-grid" id="browser-info-grid"></div>
+        </div>
       </div>
     `;
 
     this.setupTabListeners();
     this.setupButtonListeners();
+    this.setupLongPressMenu();
     this.updateProcessList();
+    this.updateBrowserInfo();
   }
 
   setupTabListeners() {
@@ -1411,6 +1687,57 @@ class TaskManager {
     endTaskBtn.addEventListener("click", () => this.endSelectedTask());
   }
 
+  setupLongPressMenu() {
+    let longPressTimer = null;
+    let longPressTarget = null;
+    let touchStartEvent = null;
+    const container = this.appMain.querySelector('.tm-process-list');
+    if (!container) return;
+
+    const startLongPress = (e) => {
+      longPressTarget = e.target.closest('.tm-process-item');
+      touchStartEvent = e;
+      longPressTimer = setTimeout(() => {
+        if (longPressTarget) {
+          this.clearSelection();
+          longPressTarget.classList.add('selected');
+          const rootIndex = parseInt(longPressTarget.dataset.index ?? longPressTarget.dataset.parentIndex);
+          const childIndex = longPressTarget.dataset.childIndex !== undefined ? parseInt(longPressTarget.dataset.childIndex) : null;
+          this.selectedApp = childIndex !== null && !Number.isNaN(childIndex) ? { rootIndex, childIndex } : { rootIndex };
+        } else {
+          this.clearSelection();
+        }
+
+        const touch = touchStartEvent.touches[0];
+        const synthEvent = new MouseEvent('contextmenu', {
+          clientX: touch.clientX,
+          clientY: touch.clientY,
+          pageX: touch.pageX,
+          pageY: touch.pageY,
+          bubbles: true,
+          cancelable: true
+        });
+        synthEvent.isLongPress = true;
+        const dispatchTarget = longPressTarget || container;
+        dispatchTarget.dispatchEvent(synthEvent);
+      }, 500);
+    };
+
+    const endLongPress = () => {
+      if (longPressTimer) {
+        clearTimeout(longPressTimer);
+        longPressTimer = null;
+      }
+      longPressTarget = null;
+      touchStartEvent = null;
+    };
+
+    container.addEventListener('touchstart', startLongPress, { passive: true });
+    container.addEventListener('touchend', endLongPress);
+    container.addEventListener('touchmove', endLongPress);
+    container.addEventListener('touchcancel', endLongPress);
+  }
+
   getApplications() {
     return window.openApplications.filter(app =>
       app && app.modWindow && app.modWindow.parentElement && !app.parentApp
@@ -1421,10 +1748,147 @@ class TaskManager {
     const appsList = this.appMain.querySelector("#applications-list");
     if (appsList) {
       const rootApps = this.getApplications();
-      appsList.innerHTML = this.renderProcessTree(rootApps) ||
+      const newHtml = this.renderProcessTree(rootApps) ||
         '<div class="tm-empty">No running applications</div>';
+      if (appsList.innerHTML !== newHtml) {
+        appsList.innerHTML = newHtml;
+        this.attachProcessListeners(appsList);
+      }
+    }
+  }
 
-      this.attachProcessListeners(appsList);
+  async getBrowserBatteryInfo() {
+    if (!navigator.getBattery) {
+      return {
+        supported: false
+      };
+    }
+    try {
+      const battery = await navigator.getBattery();
+      return {
+        supported: true,
+        level: Math.round(battery.level * 100),
+        charging: battery.charging,
+        chargingTime: battery.chargingTime,
+        dischargingTime: battery.dischargingTime
+      };
+    } catch {
+      return {
+        supported: false
+      };
+    }
+  }
+
+  async getBrowserInfo() {
+    const battery = await this.getBrowserBatteryInfo();
+    const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection || null;
+    const currentTime = new Date();
+    const orientation = screen.orientation?.type || (screen.width > screen.height ? 'landscape' : 'portrait');
+    return {
+      currentTime: currentTime.toLocaleString(),
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Unknown',
+      online: navigator.onLine ? 'Yes' : 'No',
+      connectionType: connection?.effectiveType || connection?.type || 'Unknown',
+      downlink: connection?.downlink ? `${connection.downlink} Mbps` : 'Unknown',
+      cores: navigator.hardwareConcurrency || 'Unknown',
+      memory: navigator.deviceMemory ? `${navigator.deviceMemory} GB` : 'Unknown',
+      webgl: this.webglSupported ? 'Supported' : 'Unavailable',
+      resolution: `${window.screen.width}×${window.screen.height}`,
+      orientation,
+      battery
+    };
+  }
+
+  renderBrowserInfo(info) {
+    const batteryStatus = info.battery.supported
+      ? `${info.battery.level}% · ${info.battery.charging ? 'Charging' : 'Discharging'}`
+      : 'Not supported';
+    const batteryDetails = info.battery.supported
+      ? `
+          <div class="tm-info-item">
+            <span class="tm-info-key">Time ${info.battery.charging ? 'to full' : 'remaining'}</span>
+            <span class="tm-info-value">${info.battery.charging ? (info.battery.chargingTime === Infinity ? 'Unknown' : `${Math.ceil(info.battery.chargingTime / 60)} min`) : (info.battery.dischargingTime === Infinity ? 'Unknown' : `${Math.ceil(info.battery.dischargingTime / 60)} min`)}</span>
+          </div>
+        `
+      : '';
+
+    return `
+      <div class="tm-info-grid">
+        <div class="tm-info-section">
+          <div class="tm-info-title">Date & Time</div>
+          <div class="tm-info-item">
+            <span class="tm-info-key">Current time</span>
+            <span class="tm-info-value">${info.currentTime}</span>
+          </div>
+          <div class="tm-info-item">
+            <span class="tm-info-key">Timezone</span>
+            <span class="tm-info-value">${info.timezone}</span>
+          </div>
+        </div>
+
+        <div class="tm-info-section">
+          <div class="tm-info-title">Battery</div>
+          <div class="tm-info-item">
+            <span class="tm-info-key">Level</span>
+            <span class="tm-info-value">${batteryStatus}</span>
+          </div>
+          ${batteryDetails}
+        </div>
+
+        <div class="tm-info-section">
+          <div class="tm-info-title">Network</div>
+          <div class="tm-info-item">
+            <span class="tm-info-key">Online</span>
+            <span class="tm-info-value">${info.online}</span>
+          </div>
+          <div class="tm-info-item">
+            <span class="tm-info-key">Connection</span>
+            <span class="tm-info-value">${info.connectionType}</span>
+          </div>
+          <div class="tm-info-item">
+            <span class="tm-info-key">Speed</span>
+            <span class="tm-info-value">${info.downlink}</span>
+          </div>
+        </div>
+
+        <div class="tm-info-section">
+          <div class="tm-info-title">Browser Capabilities</div>
+          <div class="tm-info-item">
+            <span class="tm-info-key">CPU cores</span>
+            <span class="tm-info-value">${info.cores}</span>
+          </div>
+          <div class="tm-info-item">
+            <span class="tm-info-key">Memory</span>
+            <span class="tm-info-value">${info.memory}</span>
+          </div>
+          <div class="tm-info-item">
+            <span class="tm-info-key">WebGL</span>
+            <span class="tm-info-value">${info.webgl}</span>
+          </div>
+        </div>
+
+        <div class="tm-info-section">
+          <div class="tm-info-title">Screen</div>
+          <div class="tm-info-item">
+            <span class="tm-info-key">Resolution</span>
+            <span class="tm-info-value">${info.resolution}</span>
+          </div>
+          <div class="tm-info-item">
+            <span class="tm-info-key">Orientation</span>
+            <span class="tm-info-value">${info.orientation}</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  async updateBrowserInfo() {
+    const browserTab = this.appMain.querySelector('#browser-info-grid');
+    if (!browserTab) return;
+    const info = await this.getBrowserInfo();
+    const newHtml = this.renderBrowserInfo(info);
+    if (browserTab.innerHTML !== newHtml) {
+      browserTab.innerHTML = newHtml;
     }
   }
 
@@ -1492,7 +1956,7 @@ class TaskManager {
       item.addEventListener("click", (e) => {
         if (e.target.classList.contains("tm-expand-btn")) return;
 
-        container.querySelectorAll(".tm-process-item").forEach(i => i.classList.remove("selected"));
+        this.clearSelection();
         item.classList.add("selected");
 
         const rootIndex = parseInt(item.dataset.index ?? item.dataset.parentIndex);
@@ -1510,31 +1974,37 @@ class TaskManager {
           targetApp.setActiveWindow();
         }
       });
-      
+
       item.addEventListener("contextmenu", (e) => {
         e.preventDefault();
         e.stopPropagation();
+        if (!e.isLongPress && (e.pointerType === 'touch' || e.type.startsWith('touch'))) return;
         this.showContextMenu(e, item);
       });
     });
 
     container.addEventListener("click", (e) => {
       if (!e.target.closest('.tm-process-item')) {
-        container.querySelectorAll(".tm-process-item").forEach(i => i.classList.remove("selected"));
-        this.selectedApp = null;
+        this.clearSelection();
       }
     });
     container.addEventListener("contextmenu", (e) => {
       if (e.target.closest('.tm-process-item')) return;
       e.preventDefault();
       e.stopPropagation();
+      if (!e.isLongPress && (e.pointerType === 'touch' || e.type.startsWith('touch'))) return;
+      this.clearSelection();
       this.showBackgroundContextMenu(e);
     });
   }
 
+  clearSelection() {
+    this.appMain.querySelectorAll(".tm-process-item").forEach(i => i.classList.remove("selected"));
+    this.selectedApp = null;
+  }
+
   showContextMenu(e, item) {
     if (this.contextMenu) this.contextMenu.remove();
-
     const rootIndex = parseInt(item.dataset.index ?? item.dataset.parentIndex);
     const childIndex = item.dataset.childIndex !== undefined ? parseInt(item.dataset.childIndex) : null;
     const apps = this.getApplications();
@@ -1542,7 +2012,7 @@ class TaskManager {
     const targetApp = childIndex !== null && app?.childApps ? app.childApps[childIndex] : app;
     if (!targetApp) return;
 
-    this.appMain.querySelectorAll(".tm-process-item").forEach(i => i.classList.remove("selected"));
+    this.clearSelection();
     item.classList.add("selected");
     this.selectedApp = childIndex !== null && !Number.isNaN(childIndex) ? { rootIndex, childIndex } : { rootIndex };
 
@@ -1580,7 +2050,7 @@ class TaskManager {
     };
     const endItem = () => {
       this.closeAppAndChildren(targetApp);
-      this.selectedApp = null;
+      this.clearSelection();
       this.updateProcessList();
       closeMenu();
     };
@@ -1666,7 +2136,7 @@ class TaskManager {
       const targetApp = childIndex !== null && app?.childApps ? app.childApps[childIndex] : app;
       if (targetApp && targetApp.modWindow) {
         this.closeAppAndChildren(targetApp);
-        this.selectedApp = null;
+        this.clearSelection();
         this.updateProcessList();
       }
     }

@@ -5,9 +5,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>TermX (MacOS)</title>
-  <meta name="description" content="TermX is a fast and modern web terminal designed for simplicity and efficiency.">
-  <meta name="keywords" content="TermX, terminal, web terminal, shell, cmd, console, command line, developer tool">
+  <title>TermOS</title>
+  <meta name="description" content="TermOS is a complete web operating system with terminal, file system, applications, and desktop environment.">
+  <meta name="keywords" content="TermOS, operating system, web OS, terminal, file manager, desktop, applications, browser OS">
   <meta name="author" content="David Haba">
   <meta name="google-site-verification" content="khV76BTjy8gt0uqmbhU3k6r3KbBZMDV3NlGX2wKs8xg" />
   <link rel="stylesheet" href="style.css">
@@ -16,14 +16,14 @@
   <link rel="apple-touch-icon" href="icon.png">
   <meta name="theme-color" content="#00ff88">
   <meta name="color-scheme" content="dark light">
-  <meta property="og:title" content="TermX — Modern Web Terminal">
-  <meta property="og:description" content="A simple, fast, and modern terminal experience in your browser.">
+  <meta property="og:title" content="TermOS — Complete Web Operating System">
+  <meta property="og:description" content="A full-featured operating system running in your browser with terminal, file manager, and applications.">
   <meta property="og:image" content="https://davidhaba.github.io/TermX/icon.png">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://davidhaba.github.io/TermX/">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="TermX — Web Terminal">
-  <meta name="twitter:description" content="Fast and efficient terminal running directly in your browser.">
+  <meta name="twitter:title" content="TermOS — Web Operating System">
+  <meta name="twitter:description" content="A complete operating system with terminal, file manager, and applications running in your browser.">
   <meta name="twitter:image" content="https://davidhaba.github.io/TermX/icon.png">
 </head>
 
@@ -31,7 +31,7 @@
   <script src="main.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
   <script>
-    const ver = 'v4.3.0',
+    const ver = 'v4.4.1',
       username = 'Sololearn',
       icons = {
         arrowUp: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M7 11.0001L12 6.00006L17 11.0001M12 18.0001V6.00006" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
@@ -84,9 +84,9 @@
     let fileSystem, desktop;
     window.openApplications = [];
     window.onload = () => {
-      if (username === 'Sololearn') alert("!! Please read this !! \n\nHey! Hope you like what you'll see. Anyway, feel free to drop a comment with any suggestions—every idea is important to me! \n\nThanks for your time and support!");
+      if (username === 'Sololearn') alert("!! Welcome to TermOS !! \n\nThis is a complete web operating system. Explore the terminal, file system, and applications. Feel free to share feedback and suggestions—they help improve the OS! \n\nThanks for trying TermOS!");
       else if (username === '') {
-        alert("Please wait while we perform system maintenance.\n\nThe application is temporarily unavailable. \nPlease try again in a few minutes.");
+        alert("System Maintenance\n\nTermOS is currently undergoing maintenance. Please try again in a few minutes.");
         return;
       }
       fileSystem = new FileSystem();
@@ -139,7 +139,7 @@
           this.globalRoot = this.createDirectory('root', { isSystem: true });
         }
         this.ensureRequiredFiles();
-        if (!this.exists(this.globalRoot.children, 'bin')) {
+        if (!this.exists(this.globalRoot.children, 'bin', 'directory')) {
           throw new Error('Failed to initialize file system');
         }
       }
@@ -188,7 +188,7 @@
           if (!file) {
             const targetDir = this._resolvePath(fileConfig.path);
             if (targetDir && targetDir.type === 'directory') {
-              const newFile = this.createFile(fileConfig.name, fileConfig.content);
+              const newFile = this.createFile(fileConfig.name, fileConfig.content, { isSystem: true });
               targetDir.children.push(newFile);
               needsSave = true;
             }
@@ -261,7 +261,13 @@
         return true;
       }
       ls(path) {
-        return this._resolvePath(path).children;
+        const resolved = this._resolvePath(path);
+        if (resolved) {
+          return resolved.children;
+        } else {
+          throw new Error("Path not found");
+          return null;
+        }
       }
       mkdirp(path) {
         const parts = path.split('/').filter(p => p);
@@ -287,8 +293,8 @@
         }
         return false;
       }
-      exists(children, name) {
-        return children.some(item => item.name === name);
+      exists(children, name, type = null) {
+        return children.some(item => item.name === name && (type == null || item.type === type));
       }
       findIndex(children, name) {
         return children.findIndex(item => item.name === name);
@@ -321,7 +327,7 @@
         if (targetDir && targetDir.type === 'directory') {
           return targetPath;
         }
-        throw new Error(`Directory not found: ${newPath}`);
+        throw new Error("Directory not found");
       }
       _findParent(targetNode, startNode = this.globalRoot) {
         if (startNode === targetNode) return null;
@@ -402,6 +408,9 @@
         const currentDir = this._resolvePath(dirPath);
         const existingFile = currentDir.children.find(f => f.name === fileName);
         if (existingFile) {
+          if (existingFile.parameters.isSystem === true) {
+            throw new Error("Can't overwrite system file");
+          }
           existingFile.content = isBinary ? new Uint8Array(content) : String(content);
         } else {
           const newFile = this.createFile(fileName, content, { isBinary: isBinary });
@@ -435,8 +444,7 @@
         const targetParent = this._resolvePath(targetParentPath);
         const targetName = targetFullPath.split('/').pop() || source.name;
         if (source.parameters.isSystem === true) {
-          if (source.type === 'file') throw new Error("Can't move system file");
-          else throw new Error("Can't move system directory");
+          throw new Error(`Can't move system ${source.type === 'file' ? 'file' : 'directory'}`);
         }
         if (!targetParent || targetParent.type !== 'directory') {
           throw new Error(`Invalid target path '${targetFullPath}'`);
@@ -798,6 +806,14 @@ Proceed with execution only if you are ABSOLUTELY sure this file is safe?`;
         }
         return copy;
       }
+      checkForbiddenChars(name) {
+        const forbiddenChars = /[<>"/\\|]/g;
+        const matches = name.match(forbiddenChars);
+        if (matches) {
+          return [...new Set(matches)];
+        }
+        return false;
+      }
     }
     class Desktop {
       constructor() {
@@ -886,7 +902,7 @@ Proceed with execution only if you are ABSOLUTELY sure this file is safe?`;
     }
     class Terminal {
       constructor() {
-        this.appName = 'TermX';
+        this.appName = 'Termix';
         this.terminalApp = new Modal(this.appName);
         this.terminalWindow = this.terminalApp.appMain;
         this.terminalWindow.classList.add("padd");
@@ -1127,8 +1143,8 @@ Proceed with execution only if you are ABSOLUTELY sure this file is safe?`;
       init() {
         this.terminalApp.setupExitBtn();
         this.terminalApp.setApp();
-        this.terminalApp.setupInfoBtn('TermX',
-          'TermX is a powerful command-line interface for interacting with the system. It supports a variety of commands for file and directory management (ls, cd, mkdir, rm, mv, cp), text manipulation (echo, cat, edit), and other utilities (help, about, clear). You can use it to perform complex operations, manage files, and even download content from the internet. Use the "help" command to see all available commands and their usage.'
+        this.terminalApp.setupInfoBtn('Termix',
+          'Termix is the terminal application within TermOS. Use it to manage files, edit text, and run utilities. Type "help" to see all available commands.'
         );
         this.context = new FileSystemClone();
         this.about();
@@ -1160,7 +1176,16 @@ Proceed with execution only if you are ABSOLUTELY sure this file is safe?`;
           lastWinHeight = currentHeight;
         });
         keyboardControls.addEventListener('touchstart', (e) => {
-          if (e.target.tagName === 'BUTTON') e.target.classList.add("active");
+          if (e.target.tagName === 'BUTTON') {
+            e.target.classList.add("active");
+            this.startHandleKey = e.target.dataset.key;
+          }
+        });
+        keyboardControls.addEventListener('mousedown', (e) => {
+          if (e.target.tagName === 'BUTTON') {
+            e.target.classList.add("active");
+            this.startHandleKey = e.target.dataset.key;
+          }
         });
         keyboardControls.addEventListener('touchend', (e) => {
           const button = e.target.tagName === 'BUTTON' ? e.target : e.target.closest('button');
@@ -1168,7 +1193,8 @@ Proceed with execution only if you are ABSOLUTELY sure this file is safe?`;
             button.classList.remove("active");
             e.preventDefault();
             const key = e.target.dataset.key;
-            if (!this.input) return;
+            if (!this.input || !key || !this.startHandleKey || key !== this.startHandleKey) return;
+            this.startHandleKey = null;
             if (key === 'ArrowLeft') {
               const start = this.input.selectionStart;
               this.input.selectionEnd = start > 0 ? start - 1 : 0;
@@ -1177,17 +1203,46 @@ Proceed with execution only if you are ABSOLUTELY sure this file is safe?`;
               const textLength = this.input.textContent.length;
               this.input.selectionStart = end < textLength ? end + 1 : textLength;
             } else {
-              this.input.dispatchEvent(new KeyboardEvent('keydown', {
-                key: key,
-                bubbles: true,
-                cancelable: true
-              }));
+              this.input.dispatchEvent(new KeyboardEvent('keydown', { key: key, bubbles: true, cancelable: true }));
             }
           }
         });
+        keyboardControls.addEventListener('mouseup', (e) => {
+          const button = e.target.tagName === 'BUTTON' ? e.target : e.target.closest('button');
+          if (button) {
+            button.classList.remove("active");
+            e.preventDefault();
+            const key = e.target.dataset.key;
+            if (!this.input || !key || !this.startHandleKey || key !== this.startHandleKey) return;
+            this.startHandleKey = null;
+            if (key === 'ArrowLeft') {
+              const start = this.input.selectionStart;
+              this.input.selectionEnd = start > 0 ? start - 1 : 0;
+            } else if (key === 'ArrowRight') {
+              const end = this.input.selectionEnd;
+              const textLength = this.input.textContent.length;
+              this.input.selectionStart = end < textLength ? end + 1 : textLength;
+            } else {
+              this.input.dispatchEvent(new KeyboardEvent('keydown', { key: key, bubbles: true, cancelable: true }));
+            }
+          }
+        });
+        keyboardControls.querySelectorAll('button').forEach((button) => {
+          button.addEventListener('touchcancel', (e) => {
+            if (e.target.tagName === 'BUTTON' && e.target.classList.contains("active")) {
+              e.target.classList.remove("active");
+              this.startHandleKey = null;
+            }
+          });
+          button.addEventListener('mouseleave', (e) => {
+            if (e.target.tagName === 'BUTTON' && e.target.classList.contains("active")) {
+              e.target.classList.remove("active");
+              this.startHandleKey = null;
+            }
+          });
+        });
       }
       exit() {
-        this.addOutputLine('Closing terminal...', 'info');
         this.terminalApp.handleClose();
       }
       placeCaretAtEnd(input) {
@@ -1229,7 +1284,7 @@ Proceed with execution only if you are ABSOLUTELY sure this file is safe?`;
         this.terminalWindow.appendChild(line);
         
         this.input.addEventListener('input', () => this.updateHint());
-        this.input.addEventListener('keydown', this.handleInput.bind(this));
+        this.input.addEventListener('keydown', (e) => this.handleInput(e));
         this.input.addEventListener('mouseup', () => this.placeCaretAtEnd(this.input));
       }
       
@@ -1414,7 +1469,7 @@ Proceed with execution only if you are ABSOLUTELY sure this file is safe?`;
         this.addOutputLine('Terminal cleared', 'info');
       }
       about() {
-        this.addOutputLine(`TermX ${ver} (by David)`, 'info');
+        this.addOutputLine(`TermOS ${ver} - Termix (by David)`, 'info');
       }
       formatItemInfo(item) {
         return fileSystem.formatSize(fileSystem.getItemSize(item), item.type);
