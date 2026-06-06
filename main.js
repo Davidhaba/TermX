@@ -323,6 +323,18 @@ class Dialog {
       footer.classList.add('title-bar');
       footer.innerHTML = buttonsHtml;
       app.modWindow.appendChild(footer);
+      app.modWindow.style.width = 'auto';
+      setTimeout(() => {
+        const buttons = footer.querySelectorAll('button');
+        let buttonsWidth = 40;
+        buttons.forEach((btn, index) => {
+          buttonsWidth += btn.offsetWidth;
+          if (index < buttons.length - 1) buttonsWidth += 10;
+        });
+        app.modWindow.style.minWidth = buttonsWidth + 'px';
+        app.modWindow.style.width = '';
+      }, 10);
+
       const closeDialog = (result) => {
         if (parentModal) {
           const index = parentModal.childApps.indexOf(app);
@@ -331,9 +343,11 @@ class Dialog {
           }
         }
         app.handleClose();
-        parentModal.dialogApp = null;
-        parentModal.unblockWindow();
-        parentModal.setActiveWindow();
+        if (parentModal) {
+          parentModal.dialogApp = null;
+          parentModal.unblockWindow();
+          parentModal.setActiveWindow();
+        }
         resolve(result);
       };
       footer.querySelectorAll('[data-action]').forEach(btn => {
@@ -374,7 +388,7 @@ class TextEditor {
     const fileMenu = document.createElement('div');
     fileMenu.className = 'file-menu';
     const fileBtn = document.createElement('button');
-    fileBtn.innerHTML = icons.fileText + ' File';
+    fileBtn.innerHTML = 'File';
     const dropdown = document.createElement('div');
     dropdown.className = 'dropdown-content';
     const newBtn = document.createElement('button');
@@ -454,14 +468,14 @@ class TextEditor {
   async confirmSave() {
     const answer = await new Dialog(
       'Unsaved Changes',
-      'Do you want to save the changes you made to this document?',
+      'Save your changes?',
       'Your changes will be lost if you don\'t save them.',
       'question',
-      ['Cancel', 'No', 'Yes'],
-      'Yes',
+      ['Cancel', "Don't Save", 'Save'],
+      'Save',
       this.app
     );
-    if (answer === 'Yes') {
+    if (answer === 'Save') {
       await this.saveFile();
       return true;
     } else if (answer === 'Cancel') {
@@ -834,7 +848,7 @@ class FileExplorer {
           alert(`The filename contains forbidden characters: ${matches.join(', ')}`);
           return;
         }
-        
+
         try {
           fileSystem.mv(
             fileSystem.getResolvedPath(this.context.path, oldName),
@@ -891,7 +905,7 @@ class FileExplorer {
       fileType = 'file' + fileType.charAt(0).toUpperCase() + fileType.slice(1).toLowerCase();
       if (icons[fileType]) return icons[fileType];
     }
-    return icons.fileUnvalid;
+    return icons.file;
   }
   navigateUp() {
     try {
@@ -992,6 +1006,7 @@ class FileExplorer {
   }
   clearSelection() {
     this.selectedItem = null;
+    this.renamingItem = null;
     this.fileList
       .querySelectorAll(".file-item")
       .forEach((i) => i.classList.remove("selected"));
@@ -2141,4 +2156,30 @@ class TaskManager {
       }
     }
   }
+}
+
+async function executeFile(path) {
+  const answer = await new Dialog(
+    'Confirm Execution',
+    'Security Risk',
+    'Executing code is dangerous. It can steal data or damage the system.\nOnly run if you trust the source.',
+    'warning',
+    ['Cancel', 'Run'],
+    'Cancel'
+  );
+  if (answer === 'Run') {
+    console.log("User confirmed execution. Running script...");
+    try {
+      (async function () {
+        fileSystem.asyncReadFile(path).then((content) => { return fileSystem.decodeContent(content, 'text'); }).then((content) => {
+          const app = new Function(content)();
+          if (app && typeof app.execute === 'function') {
+            app.execute();
+          }
+        })
+      })();
+    } catch (e) {
+      throw new Error(`Execution error: ${e.message}`);
+    }
+  };
 }
