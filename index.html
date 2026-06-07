@@ -87,13 +87,97 @@
       };
     let fileSystem, desktop;
     window.openApplications = [];
-    window.onload = () => {
+
+    const FS_DB_NAME = 'TermOS';
+    const FS_DB_VERSION = 1;
+    const FS_STORE_NAME = 'filesystem';
+    const FS_IDB_KEY = 'savefs';
+
+    function openFileSystemDB() {
+      return new Promise((resolve, reject) => {
+        if (!window.indexedDB) {
+          reject(new Error('IndexedDB is not available'));
+          return;
+        }
+        const request = indexedDB.open(FS_DB_NAME, FS_DB_VERSION);
+        request.onupgradeneeded = () => {
+          const db = request.result;
+          if (!db.objectStoreNames.contains(FS_STORE_NAME)) {
+            db.createObjectStore(FS_STORE_NAME);
+          }
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+    }
+
+    async function readFileSystemFromIDB() {
+      try {
+        const db = await openFileSystemDB();
+        return await new Promise((resolve, reject) => {
+          const tx = db.transaction(FS_STORE_NAME, 'readonly');
+          const store = tx.objectStore(FS_STORE_NAME);
+          const request = store.get(FS_IDB_KEY);
+          request.onsuccess = () => resolve(request.result ?? null);
+          request.onerror = () => reject(request.error);
+          tx.oncomplete = () => db.close();
+          tx.onerror = () => reject(tx.error);
+        });
+      } catch {
+        return null;
+      }
+    }
+
+    async function writeFileSystemToIDB(data) {
+      try {
+        const db = await openFileSystemDB();
+        return await new Promise((resolve, reject) => {
+          const tx = db.transaction(FS_STORE_NAME, 'readwrite');
+          const store = tx.objectStore(FS_STORE_NAME);
+          const request = store.put(data, FS_IDB_KEY);
+          request.onsuccess = () => resolve(true);
+          request.onerror = () => reject(request.error);
+          tx.oncomplete = () => db.close();
+          tx.onerror = () => reject(tx.error);
+        });
+      } catch {
+        return false;
+      }
+    }
+
+    async function loadFileSystem() {
+      const idbData = await readFileSystemFromIDB();
+      if (idbData !== null) {
+        return idbData;
+      }
+      try {
+        const raw = localStorage.getItem('savefs');
+        return raw ? JSON.parse(raw) : null;
+      } catch {
+        return null;
+      }
+    }
+
+    async function saveFileSystemData(data) {
+      const saved = await writeFileSystemToIDB(data);
+      if (!saved) {
+        try {
+          localStorage.setItem('savefs', JSON.stringify(data));
+          return true;
+        } catch {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    window.onload = async () => {
       if (username === 'Sololearn') alert("!! Welcome to TermOS !! \n\nThis is a complete web operating system. Explore the terminal, file system, and applications. Feel free to share feedback and suggestions—they help improve the OS! \n\nThanks for trying TermOS!");
       else if (username === '') {
         alert("System Maintenance\n\nTermOS is currently undergoing maintenance. Please try again in a few minutes.");
         return;
       }
-      fileSystem = new FileSystem();
+      fileSystem = await FileSystem.create();
       desktop = new Desktop();
       new Terminal();
     }
@@ -135,16 +219,11 @@
       }
     }
     class FileSystem {
-      constructor() {
-        const savefs = this.getFileSystem();
-        if (savefs !== null) {
-          this.globalRoot = savefs;
+      constructor(initialRoot = null) {
+        if (initialRoot) {
+          this.globalRoot = initialRoot;
         } else {
           this.globalRoot = this.createDirectory('root', { isSystem: true });
-        }
-        this.ensureRequiredFiles();
-        if (!this.exists(this.globalRoot.children, 'bin', 'directory')) {
-          throw new Error('Failed to initialize file system');
         }
 
         this.fileHandlers = {
@@ -246,6 +325,12 @@
           },
         };
       }
+      static async create() {
+        const persistedRoot = await loadFileSystem();
+        const fs = new FileSystem(persistedRoot);
+        await fs.ensureRequiredFiles();
+        return fs;
+      }
       ensureRequiredFiles() {
         const requiredDirs = [
           { name: 'home', path: '/' },
@@ -301,17 +386,16 @@
           this.saveFileSystem();
         }
       }
-      saveFileSystem() {
+      async saveFileSystem() {
         try {
-          localStorage.setItem("savefs", JSON.stringify(this.globalRoot));
-          return true;
+          return await saveFileSystemData(this.globalRoot);
         } catch {
           return false;
         }
       }
-      getFileSystem() {
+      async getFileSystem() {
         try {
-          return JSON.parse(localStorage.getItem("savefs"));
+          return await loadFileSystem();
         } catch {
           return null;
         }
@@ -500,7 +584,7 @@
         this.saveFileSystem();
         return true;
       }
-      writeFile(fullPath, content, isBinary = false) {
+      async writeFile(fullPath, content, isBinary = false) {
         if (!fullPath) throw new Error('Full path is required to write a file.');
         const pathParts = fullPath.split('/').filter(p => p);
         if (pathParts.length === 0) throw new Error('Cannot write to root directory.');
@@ -519,7 +603,7 @@
           const newFile = this.createFile(fileName, content, { isBinary: isBinary });
           currentDir.children.push(newFile);
         }
-        this.saveFileSystem();
+        await this.saveFileSystem();
         return true;
       }
 
@@ -605,48 +689,56 @@
         if (bytes >= units['KB']) return `${(bytes / units['KB']).toFixed(2)} KB`;
         return `${bytes} B`;
       }
-      async decodeContent(content, outputFormat) {
-        if (!content) return null;
-        if (content instanceof Uint8Array) {
-          content = new Blob([content]);
-        }
-        switch (outputFormat) {
-          case 'url':
-            if (typeof content === 'string' && content.startsWith('http')) {
-              return content;
-            }
-            if (content instanceof Blob) {
-              return URL.createObjectURL(content);
-            }
-            throw new Error('Cannot convert this file content to a URL.');
+      async decodeContent(content, outputFormat = null) {
+        if (content == null) return null;
+
+        const isBlob = content instanceof Blob;
+        const isUint8 = content instanceof Uint8Array;
+        const isString = typeof content === 'string';
+        const normalizedOutput = String(outputFormat || 'auto').toLowerCase();
+
+        switch (normalizedOutput) {
           case 'text':
-            if (typeof content === 'string') {
-              return content;
-            }
-            if (content instanceof Blob) {
-              return await content.text();
-            }
+          case 'string':
+            if (isString) return content;
+            if (isBlob) return await content.text();
+            if (isUint8) return new TextDecoder('utf-8').decode(content);
             throw new Error('Cannot convert this file content to text.');
           case 'blob':
-            if (content instanceof Blob) {
-              return content;
-            }
-            if (typeof content === 'string') {
-              return new Blob([content], {
-                type: 'text/plain'
-              });
-            }
+            if (isBlob) return content;
+            if (isUint8) return new Blob([content]);
+            if (isString) return new Blob([content], { type: 'text/plain' });
             throw new Error('Cannot convert this file content to a Blob.');
           case 'arraybuffer':
-            if (content instanceof Blob) {
-              return await content.arrayBuffer();
-            }
-            if (content instanceof Uint8Array) {
-              return content.buffer;
-            }
+            if (isBlob) return await content.arrayBuffer();
+            if (isUint8) return content.buffer;
+            if (isString) return new TextEncoder().encode(content).buffer;
             throw new Error('Cannot convert this file content to an ArrayBuffer.');
-          default:
+          case 'uint8array':
+          case 'binary':
+            if (isUint8) return content;
+            if (isBlob) return new Uint8Array(await content.arrayBuffer());
+            if (isString) return new TextEncoder().encode(content);
+            throw new Error('Cannot convert this file content to binary data.');
+          case 'url':
+            if (isString) {
+              const trimmed = content.trim();
+              if (/^(https?:|data:)/i.test(trimmed)) {
+                return trimmed;
+              }
+              return URL.createObjectURL(new Blob([trimmed], { type: 'text/plain' }));
+            }
+            if (isBlob) {
+              return URL.createObjectURL(content);
+            }
+            if (isUint8) {
+              return URL.createObjectURL(new Blob([content]));
+            }
+            throw new Error('Cannot convert this file content to a URL.');
+          case 'auto':
             return content;
+          default:
+            throw new Error(`Unsupported decode format: ${outputFormat}`);
         }
       }
       getFileType(fileName) {
@@ -1222,7 +1314,7 @@
             range.collapse(false);
             let sel = window.getSelection();
             sel.removeAllRanges();
-            sel.addRange(range);
+            if (range) sel.addRange(range);
           }
         }
       }
@@ -1519,7 +1611,7 @@
         }
         this.addOutputLine(`'${args[0]}' removed`);
       }
-      echo(args) {
+      async echo(args) {
         const input = args.join(' ');
         if (!input.includes('>')) {
           this.addOutputLine(input);
@@ -1532,7 +1624,7 @@
         const [text, filePath] = parts;
         const fullPath = fileSystem.getResolvedPath(this.context.path, filePath);
         const target = fileSystem._resolvePath(fullPath);
-        const success = fileSystem.writeFile(fullPath, text);
+        const success = await fileSystem.writeFile(fullPath, text);
         if (!success) throw new Error(`Failed to write to file '${fullPath}'`);
         this.addOutputLine(`Content written to '${fullPath}'`);
       }
@@ -1570,17 +1662,19 @@
         this.terminalWindow.appendChild(progressBar);
         return progressBar;
       }
-      updateProgressBar(progressBar, percent, loaded, total, label) {
+      updateProgressBar(progressBar, percent, loaded, total, label = null) {
         const percentElement = progressBar.querySelector('.progress-percent');
         const sizeElement = progressBar.querySelector('.progress-size');
         const fillElement = progressBar.querySelector('.progress-fill');
+        const labelElement = progressBar.querySelector('.progress-label');
+        if (labelElement && label && labelElement.textContent !== label) labelElement.textContent = label;
         const formattedPercent = Math.floor(percent);
         const formattedLoaded = fileSystem.formatSize(loaded);
         const formattedTotal = total > 0 ? fileSystem.formatSize(total) : '??';
         fillElement.style.width = `${percent}%`;
         percentElement.textContent = `${formattedPercent}%`;
         sizeElement.textContent = `${formattedLoaded}/${formattedTotal}`;
-        this.terminalApp.updateTitle(`${label} ${formattedPercent}% - ` + this.appName);
+        this.terminalApp.updateTitle(`${label ? label + ' ' : ''}${formattedPercent}% - ` + this.appName);
       }
       async simulateDownload(args) {
         try {
@@ -1714,35 +1808,52 @@
       }
       async download(args) {
         if (args.length < 1) throw new Error('Usage: download [url] [filename]');
-        const [url, filePath] = args;
+        const [url, manualFilePath] = args;
         try {
-          const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(url);
-          this.addOutputLine(`Starting download via proxy: ${url}`, 'info');
-          const fullPath = fileSystem.getResolvedPath(this.context.path, filePath || url.split('/').pop());
-          const progressBar = this.createProgressBar(fullPath);
-          const response = await fetch(proxyUrl);
+          const progressBar = this.createProgressBar("Pending download...");
+          const response = await fetch(url);
           if (!response.ok) throw new Error(`HTTP ${response.status}`);
           if (!response.body) throw new Error('No response body');
+          let fileName = manualFilePath;
+          if (!fileName) {
+            const contentDisposition = response.headers.get('Content-Disposition');
+            if (contentDisposition) {
+              const match = contentDisposition.match(/filename[^;=\n]*=(?:(['"]).*?\1|[^;\n]*)/);
+              if (match && match[0]) {
+                fileName = match[0].split('=')[1].trim().replace(/['"]/g, '');
+              }
+            }
+          }
+          if (!fileName) {
+            fileName = url.split('/').pop()?.split('?')[0];
+          }
+          if (!fileName || fileName === '') {
+            throw new Error('Could not determine filename. Please specify manually.');
+          }
+          const fullPath = fileSystem.getResolvedPath(this.context.path, fileName);
           const total = parseInt(response.headers.get('Content-Length') || '0');
           const reader = response.body.getReader();
           const chunks = [];
           let loaded = 0;
           while (true) {
-            const {
-              done,
-              value
-            } = await reader.read();
-            if (done) break;
-            chunks.push(value);
-            loaded += value.length;
+            const { done, value } = await reader.read();
+            if (done) {
+              break;
+            }
+            if (value) {
+              loaded += value.length;
+              chunks.push(value);
+            }
             const percent = total > 0 ? (loaded / total) * 100 : 0;
-            this.updateProgressBar(progressBar, percent, loaded, total, fullPath);
+            this.updateProgressBar(progressBar, percent, loaded, total, "Downloading " + fileName);
           }
+          this.updateProgressBar(progressBar, 99, loaded, total, "Saving to " + fullPath);
           const blob = new Blob(chunks);
           const content = new Uint8Array(await blob.arrayBuffer());
-          const success = fileSystem.writeFile(fullPath, content, true);
+          const success = await fileSystem.writeFile(fullPath, content, true);
           if (!success) throw new Error('Failed to save file');
-          this.addOutputLine(`Download complete: ${fullPath}`, 'success');
+          this.updateProgressBar(progressBar, 100, loaded, total, "Saved to " + fullPath);
+          this.addOutputLine("Download complete", 'success');
         } catch (error) {
           this.addOutputLine(`Download failed: ${error.message}`, 'error');
         }
@@ -1770,7 +1881,7 @@
             } else {
               const newFilePath = fileSystem.getResolvedPath(this.context.path, item.path);
               fileSystem.mkdirp(newFilePath.split('/').slice(0, -1).join('/'));
-              fileSystem.writeFile(newFilePath, item.content, true);
+              await fileSystem.writeFile(newFilePath, item.content, true);
             }
           }
           this.addOutputLine(`Successfully unarchived ${fileName} into ${this.context.path}`, 'success');

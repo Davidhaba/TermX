@@ -514,7 +514,7 @@ class TextEditor {
       if (!newPath) return;
       const dirPath = newPath.split('/').slice(0, -1).join('/');
       fileSystem.mkdirp(dirPath);
-      const success = fileSystem.writeFile(newPath, this.textarea.value);
+      const success = await fileSystem.writeFile(newPath, this.textarea.value);
       if (success) {
         this.path = newPath;
         this.name = newPath.split('/').pop();
@@ -1399,9 +1399,9 @@ class VideoPlayer {
 
   toggleFullscreen() {
     if (document.fullscreenElement) {
-      document.exitFullscreen().then(() => { this.fullscreenBtn.innerHTML = icons.fullscreen; }).catch(() => { });
+      document.exitFullscreen().then(() => { this.fullscreenBtn.innerHTML = icons.fullscreen; }).catch((e) => { });
     } else {
-      this.videoContainer.requestFullscreen().then(() => { this.fullscreenBtn.innerHTML = icons.minFullscreen; }).catch(() => { });
+      this.videoContainer.requestFullscreen?.().then(() => { this.fullscreenBtn.innerHTML = icons.minFullscreen; }).catch((e) => { });
     }
   }
   showControls() {
