@@ -167,10 +167,6 @@ body {
   z-index: 100;
 }
 
-.resize-handle:hover {
-  background: linear-gradient(135deg, transparent 50%, rgba(0, 255, 0, 0.6) 50%);
-}
-
 .resize-handle:active,
 .modal-window.resizing .resize-handle {
   background: linear-gradient(135deg, transparent 50%, rgba(0, 255, 0, 0.8) 50%);

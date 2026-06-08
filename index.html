@@ -35,7 +35,7 @@
   <script src="main.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
   <script>
-    const ver = 'v4.4.4',
+    const ver = 'v4.4.5',
       username = 'Sololearn',
       icons = {
         arrowUp: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M7 11.0001L12 6.00006L17 11.0001M12 18.0001V6.00006" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
@@ -85,90 +85,89 @@
         browser: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
         taskManager: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="2" width="20" height="20" rx="2" fill="#1a1a1a" stroke="#0078d4" stroke-width="1.5"/><line x1="4" y1="6" x2="20" y2="6" stroke="#0078d4" stroke-width="1"/><line x1="4" y1="9" x2="20" y2="9" stroke="#666" stroke-width="0.8"/><line x1="4" y1="12" x2="20" y2="12" stroke="#666" stroke-width="0.8"/><line x1="4" y1="15" x2="20" y2="15" stroke="#666" stroke-width="0.8"/><line x1="4" y1="18" x2="20" y2="18" stroke="#666" stroke-width="0.8"/><circle cx="7" cy="6.5" r="1.2" fill="#FFA500"/><circle cx="7" cy="9.5" r="1.2" fill="#FF6B6B"/></svg>',
       };
-    let fileSystem, desktop;
+    let iDBFS, fileSystem, desktop;
     window.openApplications = [];
 
-    const FS_DB_NAME = 'TermOS';
-    const FS_DB_VERSION = 1;
-    const FS_STORE_NAME = 'filesystem';
-    const FS_IDB_KEY = 'savefs';
-
-    function openFileSystemDB() {
-      return new Promise((resolve, reject) => {
-        if (!window.indexedDB) {
-          reject(new Error('IndexedDB is not available'));
-          return;
-        }
-        const request = indexedDB.open(FS_DB_NAME, FS_DB_VERSION);
-        request.onupgradeneeded = () => {
-          const db = request.result;
-          if (!db.objectStoreNames.contains(FS_STORE_NAME)) {
-            db.createObjectStore(FS_STORE_NAME);
+    class IndexedDBFileSystem {
+      constructor() {
+        this.FS_DB_NAME = 'TermOS';
+        this.FS_DB_VERSION = 1;
+        this.FS_STORE_NAME = 'filesystem';
+        this.FS_IDB_KEY = 'savefs';
+      }
+      open() {
+        return new Promise((resolve, reject) => {
+          if (!window.indexedDB) {
+            reject(new Error('IndexedDB is not available'));
+            return;
           }
-        };
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-      });
-    }
-
-    async function readFileSystemFromIDB() {
-      try {
-        const db = await openFileSystemDB();
-        return await new Promise((resolve, reject) => {
-          const tx = db.transaction(FS_STORE_NAME, 'readonly');
-          const store = tx.objectStore(FS_STORE_NAME);
-          const request = store.get(FS_IDB_KEY);
-          request.onsuccess = () => resolve(request.result ?? null);
+          const request = indexedDB.open(this.FS_DB_NAME, this.FS_DB_VERSION);
+          request.onupgradeneeded = () => {
+            const db = request.result;
+            if (!db.objectStoreNames.contains(this.FS_STORE_NAME)) {
+              db.createObjectStore(this.FS_STORE_NAME);
+            }
+          };
+          request.onsuccess = () => resolve(request.result);
           request.onerror = () => reject(request.error);
-          tx.oncomplete = () => db.close();
-          tx.onerror = () => reject(tx.error);
         });
-      } catch {
-        return null;
       }
-    }
-
-    async function writeFileSystemToIDB(data) {
-      try {
-        const db = await openFileSystemDB();
-        return await new Promise((resolve, reject) => {
-          const tx = db.transaction(FS_STORE_NAME, 'readwrite');
-          const store = tx.objectStore(FS_STORE_NAME);
-          const request = store.put(data, FS_IDB_KEY);
-          request.onsuccess = () => resolve(true);
-          request.onerror = () => reject(request.error);
-          tx.oncomplete = () => db.close();
-          tx.onerror = () => reject(tx.error);
-        });
-      } catch {
-        return false;
-      }
-    }
-
-    async function loadFileSystem() {
-      const idbData = await readFileSystemFromIDB();
-      if (idbData !== null) {
-        return idbData;
-      }
-      try {
-        const raw = localStorage.getItem('savefs');
-        return raw ? JSON.parse(raw) : null;
-      } catch {
-        return null;
-      }
-    }
-
-    async function saveFileSystemData(data) {
-      const saved = await writeFileSystemToIDB(data);
-      if (!saved) {
+      async load() {
+        const idbData = await this.read();
+        if (idbData !== null) {
+          return idbData;
+        }
         try {
-          localStorage.setItem('savefs', JSON.stringify(data));
-          return true;
+          const raw = localStorage.getItem('savefs');
+          return raw ? JSON.parse(raw) : null;
+        } catch {
+          return null;
+        }
+      }
+      async read() {
+        try {
+          const db = await this.open();
+          return await new Promise((resolve, reject) => {
+            const tx = db.transaction(this.FS_STORE_NAME, 'readonly');
+            const store = tx.objectStore(this.FS_STORE_NAME);
+            const request = store.get(this.FS_IDB_KEY);
+            request.onsuccess = () => resolve(request.result ?? null);
+            request.onerror = () => reject(request.error);
+            tx.oncomplete = () => db.close();
+            tx.onerror = () => reject(tx.error);
+          });
+        } catch {
+          return null;
+        }
+      }
+      async write(data) {
+        try {
+          const db = await this.open();
+          return await new Promise((resolve, reject) => {
+            const tx = db.transaction(this.FS_STORE_NAME, 'readwrite');
+            const store = tx.objectStore(this.FS_STORE_NAME);
+            const request = store.put(data, this.FS_IDB_KEY);
+            request.onsuccess = () => resolve(true);
+            request.onerror = () => reject(request.error);
+            tx.oncomplete = () => db.close();
+            tx.onerror = () => reject(tx.error);
+          });
         } catch {
           return false;
         }
       }
-      return true;
+      async save(data) {
+        const saved = await this.write(data);
+        if (!saved) {
+          try {
+            localStorage.setItem('savefs', JSON.stringify(data));
+            return true;
+          } catch {
+            return false;
+          }
+        }
+        return true;
+      }
     }
 
     window.onload = async () => {
@@ -177,6 +176,7 @@
         alert("System Maintenance\n\nTermOS is currently undergoing maintenance. Please try again in a few minutes.");
         return;
       }
+      iDBFS = new IndexedDBFileSystem();
       fileSystem = await FileSystem.create();
       desktop = new Desktop();
       new Terminal();
@@ -326,7 +326,7 @@
         };
       }
       static async create() {
-        const persistedRoot = await loadFileSystem();
+        const persistedRoot = await iDBFS.load();
         const fs = new FileSystem(persistedRoot);
         await fs.ensureRequiredFiles();
         return fs;
@@ -388,14 +388,14 @@
       }
       async saveFileSystem() {
         try {
-          return await saveFileSystemData(this.globalRoot);
+          return await iDBFS.save(this.globalRoot);
         } catch {
           return false;
         }
       }
       async getFileSystem() {
         try {
-          return await loadFileSystem();
+          return await iDBFS.load();
         } catch {
           return null;
         }
@@ -958,937 +958,6 @@
         icon.appendChild(label);
         if (app.handler && typeof app.handler === "function") icon.addEventListener("click", () => app.handler.call(this));
         this.desktop?.appendChild(icon);
-      }
-    }
-    class Terminal {
-      constructor() {
-        this.appName = 'Termix';
-        this.terminalApp = new Modal(this.appName);
-        this.terminalWindow = this.terminalApp.appMain;
-        this.terminalWindow.classList.add("padd");
-        this.terminalMain = this.terminalApp.modWindow;
-        this.updateTitle = this.terminalApp.updateTitle;
-        this.history = [];
-        this.historyIndex = -1;
-        this.isDownloadedSpec = false;
-        this.currentHint = null;
-        this.init();
-        this.commands = {
-          help: {
-            execute: this.help.bind(this),
-            help: {
-              description: "Show help information",
-              usage: "help [command]",
-              example: "help\nhelp cd"
-            }
-          },
-          about: {
-            execute: this.about.bind(this),
-            help: {
-              description: "Show information about the terminal",
-              usage: "about"
-            }
-          },
-          special: {
-            execute: async () => {
-              if (!this.isDownloadedSpec) {
-                await this.simulateDownload(['3000', '10MB', 'Downloading...']);
-                this.isDownloadedSpec = true;
-              }
-              this.isSpecialMode = true;
-              this.addOutputLine('Entered special mode. Type "exit" to return.', 'info');
-            },
-            help: {
-              description: "Enter special command mode",
-              usage: "special",
-            }
-          },
-          exit: {
-            execute: this.exit.bind(this),
-            help: {
-              description: "Exit the terminal",
-              usage: "exit",
-            }
-          },
-          clear: {
-            execute: this.clear.bind(this),
-            help: {
-              description: "Clear terminal screen",
-              usage: "clear",
-            }
-          },
-          ls: {
-            execute: this.ls.bind(this),
-            help: {
-              description: "List directory contents",
-              usage: "ls",
-              example: "ls"
-            }
-          },
-          mkdir: {
-            execute: this.mkdir.bind(this),
-            help: {
-              description: "Create new directory",
-              usage: "mkdir <directory_name>",
-              example: "mkdir new_folder"
-            }
-          },
-          cd: {
-            execute: this.cd.bind(this),
-            help: {
-              description: "Change current directory",
-              usage: "cd <path>",
-              example: "cd folder\ncd .."
-            }
-          },
-          touch: {
-            execute: this.touch.bind(this),
-            help: {
-              description: "Create new empty file",
-              usage: "touch <file_name>",
-              example: "touch file.txt"
-            }
-          },
-          rm: {
-            execute: this.rm.bind(this),
-            help: {
-              description: "Remove file or directory",
-              usage: "rm [-r] <path>",
-              example: "rm old_file\nrm -r old_folder"
-            }
-          },
-          echo: {
-            execute: this.echo.bind(this),
-            help: {
-              description: "Display message or write text to file",
-              usage: "echo [text] > [filename]",
-              example: 'echo Hello World\necho Hello World > file.txt'
-            }
-          },
-          cat: {
-            execute: this.cat.bind(this),
-            help: {
-              description: "Show file contents",
-              usage: "cat <file_name>",
-              example: "cat file.txt"
-            }
-          },
-          pwd: {
-            execute: this.pwd.bind(this),
-            help: {
-              description: "Print current working directory",
-              usage: "pwd",
-            }
-          },
-          mv: {
-            execute: this.mv.bind(this),
-            help: {
-              description: "Move or rename files and directories",
-              usage: "mv <source> <target>",
-              example: "mv old.txt new.txt\nmv file.txt dir/"
-            }
-          },
-          cp: {
-            execute: this.cp.bind(this),
-            help: {
-              description: "Copy files and directories",
-              usage: "cp <source> <target>",
-              example: "cp file.txt backup/\ncp -r dir/ backup/"
-            }
-          },
-          progress: {
-            execute: async (args) => {
-              try {
-                await this.simulateDownload(args);
-              } catch (error) {
-                this.addOutputLine(error.message, 'error');
-              }
-            },
-            help: {
-              description: "Simulate file download with progress bar",
-              usage: "progress [duration] [size] [label]",
-              example: "progress 5000 20MB Downloading..."
-            }
-          },
-          notepad: {
-            execute: (args) => {
-              const path = fileSystem.getResolvedPath(this.context.path, args[0]);
-              try {
-                if (path) {
-                  new TextEditor(path);
-                } else {
-                  new TextEditor();
-                }
-              } catch (error) {
-                this.addOutputLine(error.message, 'error');
-              }
-            },
-            help: {
-              description: "Open file in text editor",
-              usage: "notepad [file_path]",
-              example: "notepad\nnotepad ../folder/file.txt"
-            }
-          },
-          run: {
-            execute: (args) => fileSystem.openFile(fileSystem.getResolvedPath(this.context.path, args[0]), 'executable'),
-            help: {
-              description: "Execute application",
-              usage: "run <file_path>",
-              example: "run app.js"
-            }
-          },
-          open: {
-            execute: (args) => fileSystem.openFile(fileSystem.getResolvedPath(this.context.path, args[0]), args[1]),
-            help: {
-              description: "Open any file (auto-detect type)",
-              usage: "open <file_path> [file_type](audio, video, image, text or executable)",
-              example: "open document.txt\nopen folder/file text"
-            }
-          },
-          download: {
-            execute: this.download.bind(this),
-            help: {
-              description: "Download file from URL",
-              usage: "download <url> [filename]",
-              example: "download https://example.com/file.txt\n" +
-                "download https://example.com/image.png myimage.png"
-            }
-          },
-          unarchive: {
-            execute: this.unarchive.bind(this),
-            help: {
-              description: "Extract a .zip archive.",
-              usage: "unarchive <filename>",
-              example: "unarchive archive.zip"
-            }
-          },
-        };
-        this.isSpecialMode = false;
-        this.specialCommands = {
-          exit: {
-            execute: () => {
-              this.isSpecialMode = false;
-              this.addOutputLine('Exited special mode', 'info');
-            },
-            help: {
-              description: "Exit special mode",
-              usage: "exit",
-            }
-          },
-          help: {
-            execute: this.help.bind(this),
-            help: {
-              description: "Show help information",
-              usage: "help [command]",
-              example: "help\nhelp exit"
-            }
-          },
-          calc: {
-            execute: (args) => {
-              try {
-                const [mathExpression, result] = this.safeEval(args.join(' '));
-                this.addOutputLine(`${mathExpression} = ${result}`);
-              } catch (error) {
-                this.addOutputLine(error.message, 'error');
-              }
-            },
-            help: {
-              description: "Calculate math expression",
-              usage: "calc <expression>",
-              example: "1+1\ncalc 2*(3+4)"
-            }
-          }
-        };
-      }
-      init() {
-        this.terminalApp.setupExitBtn();
-        this.terminalApp.setApp();
-        this.terminalApp.setupInfoBtn('Termix',
-          'Termix is the terminal application within TermOS. Use it to manage files, edit text, and run utilities. Type "help" to see all available commands.'
-        );
-        this.context = new FileSystemClone();
-        this.about();
-        this.addOutputLine("Type 'help' for help");
-        this.createInputLine();
-        this.placeCaretAtEnd(this.input);
-        this.terminalMain.addEventListener('keyup', () => this.placeCaretAtEnd(this.input));
-        this.terminalWindow.addEventListener('click', () => this.input.focus());
-
-        const keyboardControls = document.createElement('div');
-        keyboardControls.classList.add("keyboard-controls");
-        keyboardControls.innerHTML = `
-            <button data-key="ArrowUp">${icons.arrowUp}</button>
-            <button data-key="ArrowDown">${icons.arrowDown}</button>
-            <button data-key="ArrowLeft">${icons.arrowLeft}</button>
-            <button data-key="ArrowRight">${icons.arrowRight}</button>
-            <button data-key="Tab">Tab</button>
-            <button data-key="Enter" style="padding: 5px 15px;">${icons.enter}</button>
-        `;
-        this.terminalMain.appendChild(keyboardControls);
-        let lastWinHeight = window.innerHeight;
-        window.addEventListener('resize', () => {
-          const currentHeight = window.innerHeight;
-          if (currentHeight < lastWinHeight) {
-            keyboardControls.classList.add('visible');
-          } else {
-            keyboardControls.classList.remove('visible');
-          }
-          lastWinHeight = currentHeight;
-        });
-        keyboardControls.addEventListener('touchstart', (e) => {
-          if (e.target.tagName === 'BUTTON') {
-            e.target.classList.add("active");
-            this.startHandleKey = e.target.dataset.key;
-          }
-        });
-        keyboardControls.addEventListener('mousedown', (e) => {
-          if (e.target.tagName === 'BUTTON') {
-            e.target.classList.add("active");
-            this.startHandleKey = e.target.dataset.key;
-          }
-        });
-        keyboardControls.addEventListener('touchend', (e) => {
-          const button = e.target.tagName === 'BUTTON' ? e.target : e.target.closest('button');
-          if (button) {
-            button.classList.remove("active");
-            e.preventDefault();
-            const key = e.target.dataset.key;
-            if (!this.input || !key || !this.startHandleKey || key !== this.startHandleKey) return;
-            this.startHandleKey = null;
-            if (key === 'ArrowLeft') {
-              const start = this.input.selectionStart;
-              this.input.selectionEnd = start > 0 ? start - 1 : 0;
-            } else if (key === 'ArrowRight') {
-              const end = this.input.selectionEnd;
-              const textLength = this.input.textContent.length;
-              this.input.selectionStart = end < textLength ? end + 1 : textLength;
-            } else {
-              this.input.dispatchEvent(new KeyboardEvent('keydown', { key: key, bubbles: true, cancelable: true }));
-            }
-          }
-        });
-        keyboardControls.addEventListener('mouseup', (e) => {
-          const button = e.target.tagName === 'BUTTON' ? e.target : e.target.closest('button');
-          if (button) {
-            button.classList.remove("active");
-            e.preventDefault();
-            const key = e.target.dataset.key;
-            if (!this.input || !key || !this.startHandleKey || key !== this.startHandleKey) return;
-            this.startHandleKey = null;
-            if (key === 'ArrowLeft') {
-              const start = this.input.selectionStart;
-              this.input.selectionEnd = start > 0 ? start - 1 : 0;
-            } else if (key === 'ArrowRight') {
-              const end = this.input.selectionEnd;
-              const textLength = this.input.textContent.length;
-              this.input.selectionStart = end < textLength ? end + 1 : textLength;
-            } else {
-              this.input.dispatchEvent(new KeyboardEvent('keydown', { key: key, bubbles: true, cancelable: true }));
-            }
-          }
-        });
-        keyboardControls.querySelectorAll('button').forEach((button) => {
-          button.addEventListener('touchcancel', (e) => {
-            if (e.target.tagName === 'BUTTON' && e.target.classList.contains("active")) {
-              e.target.classList.remove("active");
-              this.startHandleKey = null;
-            }
-          });
-          button.addEventListener('mouseleave', (e) => {
-            if (e.target.tagName === 'BUTTON' && e.target.classList.contains("active")) {
-              e.target.classList.remove("active");
-              this.startHandleKey = null;
-            }
-          });
-        });
-      }
-      exit() {
-        this.terminalApp.handleClose();
-      }
-      placeCaretAtEnd(input) {
-        if (input) {
-          input.focus();
-          if (typeof window.getSelection != "undefined" && typeof document.createRange != "undefined") {
-            let range = document.createRange();
-            range.selectNodeContents(input);
-            range.collapse(false);
-            let sel = window.getSelection();
-            sel.removeAllRanges();
-            if (range) sel.addRange(range);
-          }
-        }
-      }
-      createInputLine() {
-        this.terminalApp.updateTitle(this.appName);
-        const line = document.createElement('div');
-        line.className = 'i-line';
-
-        this.prompt = document.createElement('span');
-        this.prompt.className = 'prompt';
-        this.updatePrompt();
-
-        this.input = document.createElement('span');
-        this.input.className = 'stdin';
-        this.input.contentEditable = true;
-        this.input.setAttribute('autocorrect', 'off');
-        this.input.setAttribute('autocapitalize', 'off');
-        this.input.setAttribute('spellcheck', 'false');
-        this.input.setAttribute('autocomplete', 'off');
-        this.input.setAttribute('enterkeyhint', 'done');
-        this.input.spellcheck = false;
-        this.input.autocapitalize = 'none';
-        this.input.autocorrect = 'off';
-
-        line.appendChild(this.prompt);
-        line.appendChild(this.input);
-        this.terminalWindow.appendChild(line);
-
-        this.input.addEventListener('input', () => this.updateHint());
-        this.input.addEventListener('keydown', (e) => this.handleInput(e));
-        this.input.addEventListener('mouseup', () => this.placeCaretAtEnd(this.input));
-      }
-
-      updatePrompt() {
-        if (!this.isSpecialMode) this.prompt.textContent = `${this.appName}@${username}:${this.context.path}$`;
-        else this.prompt.textContent = ">>>";
-      }
-      handleInput(e) {
-        this.updatePrompt();
-        switch (e.key) {
-          case 'Enter':
-            e.preventDefault();
-            this.executeCommand(this.input.textContent.trim());
-            this.updateHint();
-            break;
-          case 'ArrowUp':
-            e.preventDefault();
-            this.navigateHistory(-1);
-            break;
-          case 'ArrowDown':
-            e.preventDefault();
-            this.navigateHistory(1);
-            break;
-          case 'ArrowLeft':
-            e.preventDefault();
-            break;
-          case 'ArrowRight':
-            e.preventDefault();
-            this.handleTab();
-            break;
-          case 'Tab':
-            e.preventDefault();
-            this.handleTab();
-            break;
-        }
-      }
-      addOutputLine(text, type = 'normal') {
-        const line = document.createElement('div');
-        line.className = 'o-line';
-        if (type !== 'normal') {
-          const badge = document.createElement('span');
-          badge.className = `badge ${type}`;
-          if (type === 'success') {
-            badge.textContent = '✓';
-          } else if (type === 'error') {
-            badge.textContent = '!';
-          } else if (type === 'info') {
-            badge.textContent = 'i';
-          }
-          line.appendChild(badge);
-        }
-        const textNode = document.createTextNode(text);
-        line.appendChild(textNode);
-        this.terminalWindow.appendChild(line);
-      }
-      createNewInputLine() {
-        this.input.contentEditable = false;
-        this.createInputLine();
-        this.placeCaretAtEnd(this.input);
-      }
-      scrollToBottom() {
-        this.terminalWindow.scrollTop = this.terminalWindow.scrollHeight;
-      }
-      navigateHistory(direction) {
-        this.historyIndex = Math.max(0,
-          Math.min(this.history.length, this.historyIndex + direction));
-        if (this.historyIndex >= 0 && this.historyIndex !== this.history.length) {
-          const history = this.history[this.historyIndex];
-          if (history) this.input.textContent = history;
-        } else {
-          this.input.textContent = '';
-        }
-        this.updateHint();
-        this.placeCaretAtEnd(this.input);
-      }
-
-      parseFullArguments(commandStr) {
-        const parts = [];
-        let inQuotes = false;
-        let currentPart = '';
-        for (let i = 0; i < commandStr.length; i++) {
-          const char = commandStr[i];
-          if (char === '"' || char === "'") {
-            inQuotes = !inQuotes;
-            if (inQuotes === false) {
-              if (currentPart.length > 0) {
-                parts.push(currentPart);
-                currentPart = '';
-              }
-            }
-          } else if (char === ' ' && !inQuotes) {
-            if (currentPart.length > 0) {
-              parts.push(currentPart);
-            }
-            currentPart = '';
-          } else {
-            currentPart += char;
-          }
-        }
-        if (currentPart.length > 0) {
-          parts.push(currentPart);
-        }
-        return parts;
-      }
-
-      async executeCommand(fullCommand) {
-        this.scrollToBottom();
-        this.input.contentEditable = false;
-        if (this.history[this.history.length - 1] !== fullCommand) {
-          this.history.push(fullCommand);
-        }
-        this.historyIndex = this.history.length;
-        const commandChain = fullCommand.split('&&').map(cmd => cmd.trim()).filter(cmd => cmd);
-        for (const commandStr of commandChain) {
-          const fullArgs = this.parseFullArguments(commandStr);
-          const command = fullArgs[0];
-          const args = fullArgs.slice(1);
-          try {
-            this.terminalApp.updateTitle(command + ' - ' + this.appName);
-            if (this.isSpecialMode) {
-              if (!this.specialCommands[command]) {
-                const [mathExpression, result] = this.safeEval(fullCommand);
-                this.addOutputLine(`${mathExpression} = ${result}`);
-                this.scrollToBottom();
-              } else {
-                await this.specialCommands[command].execute(args);
-              }
-            } else {
-              if (this.commands[command]) {
-                await this.commands[command].execute(args);
-              } else {
-                this.addOutputLine(`'${command.length > 15 ? command.substring(0, 15) + '...' : command}' is not recognized as a command`, 'error');
-              }
-            }
-          } catch (error) {
-            this.addOutputLine(error.message, 'error');
-            break;
-          }
-        }
-        this.createNewInputLine();
-        this.scrollToBottom();
-      }
-      safeEval(expression) {
-        const mathExpression = expression.replace(/[^0-9+\-*/%e^().\s]/g, '');
-        if (mathExpression.trim() === '') {
-          throw new Error("No valid mathematical expression to evaluate.");
-        }
-        try {
-          const result = new Function(`"use strict"; return (${mathExpression})`)();
-          return [mathExpression, result];
-        } catch (error) {
-          throw new Error(`Evaluation error: ${error.message}`);
-        }
-      }
-      help(args) {
-        let cmdSet = this.isSpecialMode ? this.specialCommands : this.commands;
-        if (args.length === 0) {
-          this.addOutputLine('Available commands:', 'info');
-          this.addOutputLine('\n' + 'Command'.padEnd(11) + 'Description');
-          Object.entries(cmdSet).forEach(([cmd, data]) => {
-            this.addOutputLine(`${cmd?.padEnd(10)} - ${data?.help?.description ?? '...'}`);
-          });
-          this.addOutputLine('\nUse "help <command>" for details');
-        } else {
-          const command = args[0];
-          if (cmdSet[command]) {
-            const info = cmdSet[command].help;
-            const des = info?.description;
-            const us = info?.usage;
-            const ex = info?.example?.replace(/\n/g, '\n  ');
-            this.addOutputLine("Help for: " + command, 'info');
-            if (des) this.addOutputLine("Description: " + des);
-            if (us) this.addOutputLine(`Usage:      ${us}`);
-            if (ex) this.addOutputLine(`Examples:\n  ${ex}`);
-          } else {
-            this.addOutputLine(`Command '${command}' not found`, 'error');
-          }
-        }
-      }
-      clear() {
-        this.terminalWindow.innerHTML = '';
-        this.addOutputLine('Terminal cleared', 'info');
-      }
-      about() {
-        this.addOutputLine(`TermOS ${ver} - Termix (by David)`, 'info');
-      }
-      formatItemInfo(item) {
-        return fileSystem.formatSize(fileSystem.getItemSize(item), item.type);
-      }
-      ls() {
-        const files = fileSystem.ls(this.context.path);
-        const currentDir = fileSystem._resolvePath(this.context.path);
-        let parentDir;
-        if (this.context.path !== '/') {
-          parentDir = fileSystem._resolvePath(fileSystem._findParent(this.context.path));
-        }
-        if (!parentDir && (!files.length || files.length === 0)) {
-          this.addOutputLine("Directory is empty.");
-          return;
-        }
-        if (currentDir)
-          this.addOutputLine('.'.padEnd(10) + ` [Current Directory] [${this.formatItemInfo(currentDir)}]`);
-        if (parentDir)
-          this.addOutputLine('..'.padEnd(10) + ` [Parent Directory] [${this.formatItemInfo(parentDir)}]`);
-        files.forEach(file => {
-          this.addOutputLine(file.name.padEnd(10) + ` [${file.type}] [${this.formatItemInfo(file)}]`);
-        });
-      }
-      mkdir(args) {
-        if (args.length === 0) {
-          this.addOutputLine('Please specify directory name', 'error');
-          return;
-        }
-        const success = fileSystem.mkdir(this.context.path, args[0]);
-        if (success) {
-          this.addOutputLine(`Directory '${args[0]}' created`);
-        } else {
-          this.addOutputLine(`Directory '${args[0]}' already exists`, 'error');
-        }
-      }
-      cd(args) {
-        if (args.length === 0) {
-          this.addOutputLine('Please specify path', 'error');
-          return;
-        }
-        const newPath = fileSystem.cd(this.context.path, args[0]);
-        if (!newPath) {
-          this.addOutputLine(`Invalid path: ${args[0]}`, 'error');
-        }
-        this.context.path = newPath;
-      }
-      touch(args) {
-        if (args.length === 0) {
-          throw new Error('Please specify filename');
-        }
-        const success = fileSystem.touch(this.context.path, args[0]);
-        if (success) {
-          this.addOutputLine(`File '${args[0]}' created`);
-        } else {
-          this.addOutputLine(`File '${args[0]}' already exists`, 'error');
-        }
-      }
-      rm(args) {
-        if (args.length === 0) {
-          throw new Error('Please specify path');
-        }
-        let recursive = false;
-        let success;
-        const targetIndex = args.findIndex(arg => arg !== '-r');
-        if (targetIndex !== 0) {
-          recursive = true;
-          args = args.slice(targetIndex);
-        }
-        try {
-          success = fileSystem.rm(this.context.path, args[0], recursive);
-        } catch (e) {
-          throw new Error(e);
-        }
-        if (!success) {
-          const errorMsg = recursive ?
-            "Can't remove directory" :
-            "Directory not empty, use -r for recursive removal";
-          throw new Error(errorMsg);
-        }
-        this.addOutputLine(`'${args[0]}' removed`);
-      }
-      async echo(args) {
-        const input = args.join(' ');
-        if (!input.includes('>')) {
-          this.addOutputLine(input);
-          return;
-        }
-        const parts = input.split(' > ').map(p => p.trim());
-        if (parts.length !== 2 || parts[0] === '' || parts[1] === '') {
-          throw new Error('Invalid syntax. Use: echo [text] > [filename]');
-        }
-        const [text, filePath] = parts;
-        const fullPath = fileSystem.getResolvedPath(this.context.path, filePath);
-        const target = fileSystem._resolvePath(fullPath);
-        const success = await fileSystem.writeFile(fullPath, text);
-        if (!success) throw new Error(`Failed to write to file '${fullPath}'`);
-        this.addOutputLine(`Content written to '${fullPath}'`);
-      }
-      async cat(args) {
-        if (args.length === 0) {
-          throw new Error('Please specify filename');
-        }
-        const content = await fileSystem.decodeContent(fileSystem.readFile(fileSystem.getResolvedPath(this.context.path, args[0]), { asText: true }),
-          'text');
-        if (content === null) {
-          throw new Error(`File '${args[0]}' not found`);
-        }
-        this.addOutputLine(content);
-      }
-      pwd() {
-        this.addOutputLine('Current directory: ' + this.context.path);
-      }
-      createProgressBar(label) {
-        const progressBar = document.createElement('div');
-        progressBar.className = 'progress-bar';
-        progressBar.innerHTML = `
-            <div class="progress-column">
-                <div class="progress-label">${label}</div>
-                <div class="progress-container">
-                  <div class="progress-track">
-                      <div class="progress-fill"></div>
-                  </div>
-                  <div class="progress-details">
-                      <span class="progress-percent">0%</span>
-                      <span class="progress-size">0/0</span>
-                  </div>
-                </div>
-            </div>
-        `;
-        this.terminalWindow.appendChild(progressBar);
-        return progressBar;
-      }
-      updateProgressBar(progressBar, percent, loaded, total, label = null) {
-        const percentElement = progressBar.querySelector('.progress-percent');
-        const sizeElement = progressBar.querySelector('.progress-size');
-        const fillElement = progressBar.querySelector('.progress-fill');
-        const labelElement = progressBar.querySelector('.progress-label');
-        if (labelElement && label && labelElement.textContent !== label) labelElement.textContent = label;
-        const formattedPercent = Math.floor(percent);
-        const formattedLoaded = fileSystem.formatSize(loaded);
-        const formattedTotal = total > 0 ? fileSystem.formatSize(total) : '??';
-        fillElement.style.width = `${percent}%`;
-        percentElement.textContent = `${formattedPercent}%`;
-        sizeElement.textContent = `${formattedLoaded}/${formattedTotal}`;
-        this.terminalApp.updateTitle(`${label ? label + ' ' : ''}${formattedPercent}% - ` + this.appName);
-      }
-      async simulateDownload(args) {
-        try {
-          const duration = args[0] ? parseInt(args[0]) : 5000;
-          const size = this.parseSize(args[1] || '5MB');
-          const label = args.slice(2).join(' ') || "Simulation download";
-          const progressBar = this.createProgressBar(label);
-          let loaded = 0;
-          const startTime = Date.now();
-          const updateInterval = 100;
-          const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
-          while (true) {
-            const elapsed = Date.now() - startTime;
-            const percent = Math.min(100, (elapsed / duration) * 100);
-            loaded = Math.min(size, (size * percent) / 100);
-            this.updateProgressBar(progressBar, percent, loaded, size, label);
-            if (percent >= 100) break;
-            await delay(updateInterval);
-          }
-          this.addOutputLine("Download complete!", 'success');
-        } catch (error) {
-          this.addOutputLine(`Simulation error: ${error.message}`, 'error');
-        }
-      }
-      parseSize(sizeStr) {
-        const units = {
-          'B': 1,
-          'KB': 1024,
-          'MB': 1024 * 1024,
-          'GB': 1024 * 1024 * 1024
-        };
-        const match = sizeStr.match(/^(\d+)([KMGT]?B)$/i);
-        if (!match) throw new Error('Invalid size format');
-        const value = parseInt(match[1]);
-        const unit = match[2].toUpperCase();
-        if (!units[unit]) throw new Error('Unknown unit');
-        return value * units[unit];
-      }
-      removeHint() {
-        try {
-          if (this.currentHint) {
-            this.currentHint.remove();
-            this.currentHint = null;
-          }
-        } catch { }
-      }
-      updateHint() {
-        try {
-          this.removeHint();
-          const hint = this.getHints(this.input.textContent)[0];
-          if (!hint || hint === '') return;
-          this.currentHint = document.createElement('span');
-          this.currentHint.className = 'stdin-hint';
-          this.currentHint.textContent = hint;
-          this.input.parentNode.appendChild(this.currentHint);
-        } catch {
-          this.removeHint();
-        }
-      }
-      getHints(text) {
-        if (!text) return null;
-        const parts = text.split(' ');
-        const currentWord = parts[parts.length - 1];
-        const commands = this.isSpecialMode ? this.specialCommands : this.commands;
-        if (parts.length === 1) {
-          return Object.keys(commands)
-            .filter(cmd => cmd.startsWith(currentWord))
-            .map(cmd => cmd.slice(currentWord.length));
-        }
-        const command = parts[0];
-        if (commands[command]) {
-          return this.getCommandHints(command, parts.slice(1), currentWord);
-        }
-        return [''];
-      }
-      getCommandHints(command, args, currentWord) {
-        switch (command) {
-          case 'help':
-            if (args.length <= 1)
-              return Object.keys(this.isSpecialMode ? this.specialCommands : this.commands).filter(cmd => cmd.startsWith(currentWord)).map(cmd => cmd.slice(currentWord.length));
-          case 'cd':
-            if (args.length <= 1)
-              return fileSystem.ls(this.context.path).filter(f => f.type === 'directory' && f.name.startsWith(currentWord)).map(f => f.name.slice(currentWord.length));
-          case 'cat':
-          case 'notepad':
-          case 'run':
-          case 'open':
-          case 'unarchive':
-            if (args.length <= 1)
-              return fileSystem.ls(this.context.path).filter(f => f.type === 'file' && f.name.startsWith(currentWord)).map(f => f.name.slice(currentWord.length));
-          case 'echo':
-            if (args.length <= 2)
-              return [];
-          case 'rm':
-          case 'cp':
-          case 'mv':
-            return fileSystem.ls(this.context.path).filter(f => f.name.startsWith(currentWord)).map(f => f.name.slice(currentWord.length));
-          case 'calc':
-            return ['+', '-', '*', '/', '%'].filter(op => op.startsWith(currentWord)).map(op => op.slice(currentWord.length));
-          default:
-            return [];
-        }
-      }
-      handleTab() {
-        if (this.currentHint) {
-          const hintText = this.currentHint.textContent;
-          this.input.textContent += hintText;
-          this.updateHint();
-          this.placeCaretAtEnd(this.input);
-        }
-      }
-      mv(args) {
-        if (args.length < 2) {
-          throw new Error('Usage: mv [source] [target]');
-        }
-        const [source, target] = args;
-        const success = fileSystem.mv(fileSystem.getResolvedPath(this.context.path, source), fileSystem.getResolvedPath(this.context.path, target));
-        if (success) {
-          this.addOutputLine(`Moved '${source}' to '${target}'`);
-        }
-      }
-      cp(args) {
-        if (args.length < 2) {
-          throw new Error('Usage: cp [source] [target]');
-        }
-        const [source, target] = args;
-        const success = fileSystem.cp(this.context.path, source, target);
-        if (success) {
-          this.addOutputLine(`Copied '${source}' to '${target}'`);
-        }
-      }
-      async download(args) {
-        if (args.length < 1) throw new Error('Usage: download [url] [filename]');
-        const [url, manualFilePath] = args;
-        try {
-          const progressBar = this.createProgressBar("Pending download...");
-          const response = await fetch(url);
-          if (!response.ok) throw new Error(`HTTP ${response.status}`);
-          if (!response.body) throw new Error('No response body');
-          let fileName = manualFilePath;
-          if (!fileName) {
-            const contentDisposition = response.headers.get('Content-Disposition');
-            if (contentDisposition) {
-              const match = contentDisposition.match(/filename[^;=\n]*=(?:(['"]).*?\1|[^;\n]*)/);
-              if (match && match[0]) {
-                fileName = match[0].split('=')[1].trim().replace(/['"]/g, '');
-              }
-            }
-          }
-          if (!fileName) {
-            fileName = url.split('/').pop()?.split('?')[0];
-          }
-          if (!fileName || fileName === '') {
-            throw new Error('Could not determine filename. Please specify manually.');
-          }
-          const fullPath = fileSystem.getResolvedPath(this.context.path, fileName);
-          const total = parseInt(response.headers.get('Content-Length') || '0');
-          const reader = response.body.getReader();
-          const chunks = [];
-          let loaded = 0;
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) {
-              break;
-            }
-            if (value) {
-              loaded += value.length;
-              chunks.push(value);
-            }
-            const percent = total > 0 ? (loaded / total) * 100 : 0;
-            this.updateProgressBar(progressBar, percent, loaded, total, "Downloading " + fileName);
-          }
-          this.updateProgressBar(progressBar, 99, loaded, total, "Saving to " + fullPath);
-          const blob = new Blob(chunks);
-          const content = new Uint8Array(await blob.arrayBuffer());
-          const success = await fileSystem.writeFile(fullPath, content, true);
-          if (!success) throw new Error('Failed to save file');
-          this.updateProgressBar(progressBar, 100, loaded, total, "Saved to " + fullPath);
-          this.addOutputLine("Download complete", 'success');
-        } catch (error) {
-          this.addOutputLine(`Download failed: ${error.message}`, 'error');
-        }
-      }
-      async unarchive(args) {
-        if (args.length < 1) {
-          this.addOutputLine('Usage: unarchive <filename>', 'error');
-          return;
-        }
-        const fileName = args[0];
-        try {
-          const fullPath = fileSystem.getResolvedPath(this.context.path, fileName);
-          const file = fileSystem._resolvePath(fullPath);
-          if (!file || file.type !== 'file') {
-            throw new Error(`File not found: ${fileName}`);
-          }
-          this.addOutputLine(`Unpacking ${fileName}...`, 'info');
-          const progressBar = this.createProgressBar(fileName);
-          const extractedFiles = await fileSystem.unarchive(file, (processed, total) => {
-            this.updateProgressBar(progressBar, (processed / total) * 100, processed, total, fileName);
-          });
-          for (const item of extractedFiles) {
-            if (item.isDirectory) {
-              fileSystem.mkdirp(fileSystem.getResolvedPath(this.context.path, item.path));
-            } else {
-              const newFilePath = fileSystem.getResolvedPath(this.context.path, item.path);
-              fileSystem.mkdirp(newFilePath.split('/').slice(0, -1).join('/'));
-              await fileSystem.writeFile(newFilePath, item.content, true);
-            }
-          }
-          this.addOutputLine(`Successfully unarchived ${fileName} into ${this.context.path}`, 'success');
-          this.updateProgressBar(progressBar, 100, extractedFiles.length, extractedFiles.length, fileName);
-        } catch (error) {
-          this.addOutputLine(error.message, 'error');
-        }
       }
     }
   </script>
